@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePrompt } from "@/lib/generator/prompt-generator";
-import type { SpecDocument } from "@/lib/types/spec-dsl";
+import { compileBlueprint } from "@/lib/compiler";
+import type { SpecDocument } from "@/lib/types/spatial";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,16 +14,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = generatePrompt(specDocument);
+    const prompt = compileBlueprint(specDocument);
 
     return NextResponse.json({
-      systemPrompt: prompt.systemPrompt,
+      fullBlueprint: prompt.fullBlueprint,
       chunks: prompt.chunks,
-      fullMarkdown: prompt.fullMarkdown,
-      cursorRules: prompt.cursorRules,
-      designTokensMarkdown: prompt.designTokensMarkdown,
-      componentGuide: prompt.componentGuide,
-      fileTreeMarkdown: prompt.fileTreeMarkdown,
+      viewportSetup: prompt.viewportSetup,
+      spatialMatrix: prompt.spatialMatrix,
+      microEffects: prompt.microEffects,
+      responsiveRules: prompt.responsiveRules,
+      codeGenerationSteps: prompt.codeGenerationSteps,
       metadata: {
         generatedAt: new Date().toISOString(),
         totalChunks: prompt.chunks.length,
@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Prompt generation error:", error);
+    console.error("Blueprint compilation error:", error);
     return NextResponse.json(
-      { error: "Failed to generate prompt" },
+      { error: "Failed to compile blueprint" },
       { status: 500 }
     );
   }

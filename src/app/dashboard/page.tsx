@@ -25,10 +25,10 @@ import {
   Unlink,
 } from "lucide-react";
 import Link from "next/link";
-import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spec-dsl";
+import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spatial";
 
 type InputSource = "git" | "figma" | "psd" | null;
-type ProcessingStep = "idle" | "extracting" | "analyzing" | "generating" | "complete";
+type ProcessingStep = "idle" | "extracting" | "generating" | "complete";
 
 export default function DashboardPage() {
   const [source, setSource] = useState<InputSource>(null);
@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [gitToken, setGitToken] = useState("");
   const [figmaUrl, setFigmaUrl] = useState("");
   const [psdFile, setPsdFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
 
   const [step, setStep] = useState<ProcessingStep>("idle");
@@ -93,6 +94,7 @@ export default function DashboardPage() {
     setGitToken("");
     setFigmaUrl("");
     setPsdFile(null);
+    setImageFile(null);
     setImageUrl("");
     setStep("idle");
     setProgress(0);
@@ -126,43 +128,37 @@ export default function DashboardPage() {
         source: "git",
         sourceUrl: gitUrl,
         projectName: gitUrl.split("/").pop()?.replace(".git", "") || "project",
-        designTokens: {
-          colors: {
-            primary: "#3b82f6",
-            secondary: "#6b7280",
-            accent: "#8b5cf6",
-            background: "#ffffff",
-            foreground: "#171717",
-            muted: "#a3a3a3",
-            border: "#e5e7eb",
-            destructive: "#ef4444",
-          },
-          typography: {
-            fontFamily: "Inter, sans-serif",
-            sizes: { sm: 14, base: 16, lg: 18, xl: 20, "2xl": 24, "3xl": 30 },
-            weights: { normal: 400, medium: 500, semibold: 600, bold: 700 },
-            lineHeights: { tight: 1.25, normal: 1.5, relaxed: 1.75 },
-          },
-          spacing: { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 },
-          radii: { none: 0, sm: 2, DEFAULT: 4, md: 6, lg: 8, xl: 12, "2xl": 16, full: 9999 },
+        extraction: {
+          elements: data.componentSignatures.map((sig: { name: string; path: string }) => ({
+            id: sig.path,
+            name: sig.name,
+            semanticTag: "div" as const,
+            layout: {
+              desktop_16_9: {
+                positionMode: "flex" as const,
+                coordinates: { x: 0, y: 0, width: 1920, height: 1080 },
+                viewportPercentage: { top: "0%", left: "0%", width: "100%", height: "100%" },
+                margin: [0, 0, 0, 0] as [number, number, number, number],
+                padding: [16, 16, 16, 16] as [number, number, number, number],
+                alignment: { justify: "start", align: "start" },
+              },
+            },
+            styling: {
+              backgroundColor: "transparent",
+              borderRadius: { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0, tailwindEquivalent: "rounded-none" },
+              border: { width: 0, style: "none" as const, color: "transparent" },
+              effects: { opacity: 1 },
+            },
+            interactions: {},
+          })),
+          globalTokens: { colors: {}, fonts: {}, shadows: [], gradients: [] },
         },
-        components: data.componentSignatures.map((sig: { name: string; path: string; props: string[] }) => ({
-          id: sig.path,
-          name: sig.name,
-          category: "Unknown" as const,
-          boundingBox: { x: 0, y: 0, width: 0, height: 0 },
-          spatialDistances: { marginTop: 0, marginRight: 0, marginBottom: 0, marginLeft: 0, paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0 },
-          layout: { type: "flex" as const, gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
-          styles: { colors: {}, radius: 0 },
-          children: [],
-          componentName: sig.name,
-        })),
         fileTree: data.fileTree,
         metadata: {
           extractedAt: new Date().toISOString(),
-          sourceWidth: 0,
-          sourceHeight: 0,
-          totalComponents: data.componentSignatures.length,
+          sourceWidth: 1920,
+          sourceHeight: 1080,
+          totalElements: data.componentSignatures.length,
         },
       };
 
@@ -175,7 +171,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ specDocument: doc }),
       });
 
-      if (!promptResponse.ok) throw new Error("Failed to generate prompt");
+      if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
       setProgress(100);
@@ -216,13 +212,15 @@ export default function DashboardPage() {
         source: "figma",
         sourceUrl: figmaUrl,
         projectName: data.metadata.fileName || "figma-design",
-        designTokens: data.designTokens,
-        components: data.components,
+        extraction: {
+          elements: data.components || [],
+          globalTokens: data.designTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] },
+        },
         metadata: {
           extractedAt: new Date().toISOString(),
           sourceWidth: data.metadata.width,
           sourceHeight: data.metadata.height,
-          totalComponents: data.metadata.totalComponents,
+          totalElements: data.metadata.totalComponents,
         },
       };
 
@@ -235,7 +233,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ specDocument: doc }),
       });
 
-      if (!promptResponse.ok) throw new Error("Failed to generate prompt");
+      if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
       setProgress(100);
@@ -273,32 +271,15 @@ export default function DashboardPage() {
       const doc: SpecDocument = {
         source: "psd",
         projectName: psdFile.name.replace(".psd", ""),
-        designTokens: {
-          colors: {
-            primary: "#3b82f6",
-            secondary: "#6b7280",
-            accent: "#8b5cf6",
-            background: "#ffffff",
-            foreground: "#171717",
-            muted: "#a3a3a3",
-            border: "#e5e7eb",
-            destructive: "#ef4444",
-          },
-          typography: {
-            fontFamily: "Inter, sans-serif",
-            sizes: { sm: 14, base: 16, lg: 18, xl: 20, "2xl": 24, "3xl": 30 },
-            weights: { normal: 400, medium: 500, semibold: 600, bold: 700 },
-            lineHeights: { tight: 1.25, normal: 1.5, relaxed: 1.75 },
-          },
-          spacing: { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 },
-          radii: { none: 0, sm: 2, DEFAULT: 4, md: 6, lg: 8, xl: 12, "2xl": 16, full: 9999 },
+        extraction: {
+          elements: data.components || [],
+          globalTokens: { colors: {}, fonts: {}, shadows: [], gradients: [] },
         },
-        components: data.components,
         metadata: {
           extractedAt: new Date().toISOString(),
           sourceWidth: data.metadata.width,
           sourceHeight: data.metadata.height,
-          totalComponents: data.metadata.totalComponents,
+          totalElements: data.metadata.totalComponents,
         },
       };
 
@@ -311,7 +292,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ specDocument: doc }),
       });
 
-      if (!promptResponse.ok) throw new Error("Failed to generate prompt");
+      if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
       setProgress(100);
@@ -324,14 +305,14 @@ export default function DashboardPage() {
   };
 
   const handleVisionAnalyze = async () => {
-    if (!imageUrl) return;
+    if (!imageFile) return;
     setStep("extracting");
     setProgress(20);
     setError(null);
 
     try {
       const formData = new FormData();
-      formData.append("imageUrl", imageUrl);
+      formData.append("image", imageFile);
 
       const response = await fetch("/api/analyze-vision", {
         method: "POST",
@@ -348,45 +329,16 @@ export default function DashboardPage() {
 
       const doc: SpecDocument = {
         source: "vision",
-        sourceUrl: imageUrl,
         projectName: "design-analysis",
-        designTokens: {
-          colors: {
-            primary: data.designTokens?.colors?.[0] || "#3b82f6",
-            secondary: data.designTokens?.colors?.[1] || "#6b7280",
-            accent: data.designTokens?.colors?.[2] || "#8b5cf6",
-            background: "#ffffff",
-            foreground: "#171717",
-            muted: "#a3a3a3",
-            border: "#e5e7eb",
-            destructive: "#ef4444",
-          },
-          typography: {
-            fontFamily: data.designTokens?.fonts?.[0]?.family || "Inter, sans-serif",
-            sizes: { sm: 14, base: 16, lg: 18, xl: 20, "2xl": 24, "3xl": 30 },
-            weights: { normal: 400, medium: 500, semibold: 600, bold: 700 },
-            lineHeights: { tight: 1.25, normal: 1.5, relaxed: 1.75 },
-          },
-          spacing: { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 },
-          radii: { none: 0, sm: 2, DEFAULT: 4, md: 6, lg: 8, xl: 12, "2xl": 16, full: 9999 },
+        extraction: {
+          elements: data.elements || [],
+          globalTokens: data.globalTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] },
         },
-        components: data.detections.map((d: { label: string; category: string; bbox: [number, number, number, number]; confidence: number; styles?: Record<string, unknown>; text?: string }) => ({
-          id: Math.random().toString(36).substring(7),
-          name: d.label,
-          category: d.category || "Unknown",
-          boundingBox: { x: d.bbox[0], y: d.bbox[1], width: d.bbox[2] - d.bbox[0], height: d.bbox[3] - d.bbox[1] },
-          spatialDistances: { marginTop: 0, marginRight: 0, marginBottom: 0, marginLeft: 0, paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0 },
-          layout: { type: "flex" as const, gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
-          styles: { colors: d.styles?.backgroundColor ? { background: d.styles.backgroundColor as string } : {}, radius: (d.styles?.borderRadius as number) || 0 },
-          children: [],
-          textContent: d.text,
-          componentName: d.label.replace(/\s+/g, ""),
-        })),
         metadata: {
           extractedAt: new Date().toISOString(),
-          sourceWidth: 0,
-          sourceHeight: 0,
-          totalComponents: data.detections.length,
+          sourceWidth: data.metadata?.sourceWidth || 1920,
+          sourceHeight: data.metadata?.sourceHeight || 1080,
+          totalElements: data.metadata?.elementCount || 0,
         },
       };
 
@@ -399,7 +351,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ specDocument: doc }),
       });
 
-      if (!promptResponse.ok) throw new Error("Failed to generate prompt");
+      if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
       setProgress(100);
@@ -420,9 +372,9 @@ export default function DashboardPage() {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setImageUrl(url);
+    if (file && file.type.startsWith("image/")) {
+      setImageFile(file);
+      setImageUrl(file.name);
     }
   };
 
@@ -640,15 +592,39 @@ export default function DashboardPage() {
                   <CardTitle>PSD / Image Upload</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Tabs defaultValue="psd">
+                  <Tabs defaultValue="image">
                     <TabsList className="w-full">
+                      <TabsTrigger value="image" className="flex-1">
+                        Image File
+                      </TabsTrigger>
                       <TabsTrigger value="psd" className="flex-1">
                         PSD File
                       </TabsTrigger>
-                      <TabsTrigger value="image" className="flex-1">
+                      <TabsTrigger value="url" className="flex-1">
                         Image URL
                       </TabsTrigger>
                     </TabsList>
+                    <TabsContent value="image" className="space-y-4">
+                      <div
+                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                        onClick={() => imageInputRef.current?.click()}
+                      >
+                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          {imageFile ? imageFile.name : "Click to upload image from your device"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          PNG, JPG, WebP, GIF
+                        </p>
+                      </div>
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                    </TabsContent>
                     <TabsContent value="psd" className="space-y-4">
                       <div
                         className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
@@ -667,37 +643,31 @@ export default function DashboardPage() {
                         onChange={handleFileUpload}
                       />
                     </TabsContent>
-                    <TabsContent value="image" className="space-y-4">
+                    <TabsContent value="url" className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Image URL</label>
                         <Input
                           placeholder="https://example.com/design.png"
-                          value={imageUrl}
-                          onChange={(e) => setImageUrl(e.target.value)}
+                          value={imageUrl && imageFile ? "" : imageUrl}
+                          onChange={(e) => {
+                            setImageUrl(e.target.value);
+                            setImageFile(null);
+                          }}
                           disabled={isProcessing}
                         />
                       </div>
-                      <div className="text-center text-sm text-muted-foreground">or</div>
-                      <div
-                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => imageInputRef.current?.click()}
-                      >
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">Click to upload image</p>
-                      </div>
-                      <input
-                        ref={imageInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageUpload}
-                      />
                     </TabsContent>
                   </Tabs>
                   <Button
                     className="w-full"
-                    onClick={source === "psd" && psdFile ? handlePsdAnalyze : handleVisionAnalyze}
-                    disabled={(!psdFile && !imageUrl) || isProcessing}
+                    onClick={() => {
+                      if (psdFile) {
+                        handlePsdAnalyze();
+                      } else if (imageFile) {
+                        handleVisionAnalyze();
+                      }
+                    }}
+                    disabled={(!psdFile && !imageFile) || isProcessing}
                   >
                     {isProcessing ? (
                       <>
@@ -721,9 +691,8 @@ export default function DashboardPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span>
-                        {step === "extracting" && "Extracting design data..."}
-                        {step === "analyzing" && "Analyzing components..."}
-                        {step === "generating" && "Generating prompts..."}
+                        {step === "extracting" && "Extracting spatial data with Gemini 2.5 Flash..."}
+                        {step === "generating" && "Compiling pixel-accurate blueprint..."}
                       </span>
                       <span>{progress}%</span>
                     </div>
@@ -748,12 +717,12 @@ export default function DashboardPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
-                      Generated Prompt
+                      Generated Blueprint
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => copyToClipboard(generatedPrompt.systemPrompt)}
+                          onClick={() => copyToClipboard(generatedPrompt.fullBlueprint)}
                         >
                           {copied ? (
                             <Check className="h-4 w-4 mr-1" />
@@ -766,7 +735,7 @@ export default function DashboardPage() {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            downloadFile(generatedPrompt.fullMarkdown, "designer-prompt.md")
+                            downloadFile(generatedPrompt.fullBlueprint, "designer-blueprint.md")
                           }
                         >
                           <Download className="h-4 w-4 mr-1" />
@@ -780,62 +749,73 @@ export default function DashboardPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Tabs defaultValue="system">
+                    <Tabs defaultValue="viewport">
                       <TabsList>
-                        <TabsTrigger value="system" className="gap-1">
+                        <TabsTrigger value="viewport" className="gap-1">
                           <Code2 className="h-3 w-3" />
-                          System Prompt
+                          Viewport
                         </TabsTrigger>
-                        <TabsTrigger value="design" className="gap-1">
+                        <TabsTrigger value="spatial" className="gap-1">
                           <Eye className="h-3 w-3" />
-                          Design Tokens
+                          Spatial
                         </TabsTrigger>
-                        <TabsTrigger value="components" className="gap-1">
-                          <FileText className="h-3 w-3" />
-                          Components
-                        </TabsTrigger>
-                        <TabsTrigger value="cursor" className="gap-1">
+                        <TabsTrigger value="effects" className="gap-1">
                           <Sparkles className="h-3 w-3" />
-                          Cursor Rules
+                          Effects
+                        </TabsTrigger>
+                        <TabsTrigger value="responsive" className="gap-1">
+                          <FileText className="h-3 w-3" />
+                          Responsive
+                        </TabsTrigger>
+                        <TabsTrigger value="code" className="gap-1">
+                          <Code2 className="h-3 w-3" />
+                          Code
                         </TabsTrigger>
                       </TabsList>
-                      <TabsContent value="system">
+                      <TabsContent value="viewport">
                         <Textarea
                           readOnly
                           className="min-h-[400px] font-mono text-xs"
-                          value={generatedPrompt.systemPrompt}
+                          value={generatedPrompt.viewportSetup}
                         />
                       </TabsContent>
-                      <TabsContent value="design">
+                      <TabsContent value="spatial">
                         <Textarea
                           readOnly
                           className="min-h-[400px] font-mono text-xs"
-                          value={generatedPrompt.designTokensMarkdown}
+                          value={generatedPrompt.spatialMatrix}
                         />
                       </TabsContent>
-                      <TabsContent value="components">
+                      <TabsContent value="effects">
                         <Textarea
                           readOnly
                           className="min-h-[400px] font-mono text-xs"
-                          value={generatedPrompt.componentGuide}
+                          value={generatedPrompt.microEffects}
                         />
                       </TabsContent>
-                      <TabsContent value="cursor">
+                      <TabsContent value="responsive">
+                        <Textarea
+                          readOnly
+                          className="min-h-[400px] font-mono text-xs"
+                          value={generatedPrompt.responsiveRules}
+                        />
+                      </TabsContent>
+                      <TabsContent value="code">
                         <div className="space-y-2">
                           <Textarea
                             readOnly
                             className="min-h-[300px] font-mono text-xs"
-                            value={generatedPrompt.cursorRules}
+                            value={generatedPrompt.codeGenerationSteps}
                           />
                           <Button
                             variant="outline"
                             className="w-full"
                             onClick={() =>
-                              downloadFile(generatedPrompt.cursorRules, ".cursorrules")
+                              downloadFile(generatedPrompt.fullBlueprint, "designer-blueprint.md")
                             }
                           >
                             <Download className="h-4 w-4 mr-2" />
-                            Download .cursorrules
+                            Download Full Blueprint
                           </Button>
                         </div>
                       </TabsContent>
@@ -845,24 +825,24 @@ export default function DashboardPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Spec Document Preview</CardTitle>
+                    <CardTitle>Extracted Elements</CardTitle>
                     <CardDescription>
-                      {specDocument?.metadata.totalComponents} components extracted
+                      {specDocument?.metadata.totalElements} elements detected
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {specDocument?.components.map((comp) => (
+                      {specDocument?.extraction.elements.map((el) => (
                         <div
-                          key={comp.id}
+                          key={el.id}
                           className="flex items-center justify-between p-2 rounded border"
                         >
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{comp.category}</Badge>
-                            <span className="text-sm">{comp.componentName || comp.name}</span>
+                            <Badge variant="secondary">{el.semanticTag}</Badge>
+                            <span className="text-sm">{el.name}</span>
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {comp.boundingBox.width}x{comp.boundingBox.height}
+                            {el.layout.desktop_16_9.coordinates.width}x{el.layout.desktop_16_9.coordinates.height}
                           </span>
                         </div>
                       ))}
@@ -879,8 +859,8 @@ export default function DashboardPage() {
                     <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No analysis yet</p>
                     <p className="text-sm">
-                      Select an input source and provide your design to get
-                      started.
+                      Select an input source and provide your design to generate
+                      a pixel-accurate implementation blueprint.
                     </p>
                   </div>
                 </CardContent>

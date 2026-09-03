@@ -52,17 +52,16 @@ export async function POST(request: NextRequest) {
     }
 
     const figmaData = await response.json();
-
     const parsed = await parseFigmaFile(figmaData);
 
     return NextResponse.json({
-      components: parsed.components,
-      designTokens: parsed.designTokens,
+      elements: parsed.elements,
+      globalTokens: parsed.globalTokens,
       metadata: {
         fileName: figmaData.name,
         width: parsed.width,
         height: parsed.height,
-        totalComponents: parsed.components.length,
+        totalComponents: parsed.elements.length,
         extractedAt: new Date().toISOString(),
       },
     });
