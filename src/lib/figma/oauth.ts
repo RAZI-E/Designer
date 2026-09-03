@@ -11,26 +11,36 @@ export interface FigmaOAuthTokens {
 export interface FigmaOAuthState {
   state: string;
   redirect_to?: string;
+  redirect_uri?: string;
 }
 
 const TOKEN_COOKIE = "figma_token";
 const STATE_COOKIE = "figma_state";
-const TOKEN_MAX_AGE = 60 * 60 * 24 * 30;
+const TOKEN_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
+export function isRequestSecure(request?: { url?: string; headers?: { get(name: string): string | null } }): boolean {
+  if (!request) {
+    return process.env.NODE_ENV === "production";
+  }
+  const proto = request.headers?.get("x-forwarded-proto") || (request.url?.startsWith("https://") ? "https" : "http");
+  return proto === "https";
+}
 
 export function generateRandomState(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
-export function serializeTokenCookie(tokens: FigmaOAuthTokens): string {
+export function serializeTokenCookie(tokens: FigmaOAuthTokens, secure: boolean = false): string {
   const value = JSON.stringify(tokens);
-  return [
+  const parts = [
     `${TOKEN_COOKIE}=${encodeURIComponent(value)}`,
     "Path=/",
     "HttpOnly",
-    "Secure",
     "SameSite=Lax",
     `Max-Age=${TOKEN_MAX_AGE}`,
-  ].join("; ");
+  ];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
 }
 
 export function parseTokenCookie(cookieHeader: string | null): FigmaOAuthTokens | null {
@@ -46,20 +56,23 @@ export function parseTokenCookie(cookieHeader: string | null): FigmaOAuthTokens 
   }
 }
 
-export function deleteTokenCookie(): string {
-  return [`${TOKEN_COOKIE}=`, "Path=/", "HttpOnly", "Secure", "SameSite=Lax", "Max-Age=0"].join("; ");
+export function deleteTokenCookie(secure: boolean = false): string {
+  const parts = [`${TOKEN_COOKIE}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
 }
 
-export function serializeStateCookie(state: FigmaOAuthState): string {
+export function serializeStateCookie(state: FigmaOAuthState, secure: boolean = false): string {
   const value = JSON.stringify(state);
-  return [
+  const parts = [
     `${STATE_COOKIE}=${encodeURIComponent(value)}`,
     "Path=/",
     "HttpOnly",
-    "Secure",
     "SameSite=Lax",
     "Max-Age=600",
-  ].join("; ");
+  ];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
 }
 
 export function parseStateCookie(cookieHeader: string | null): FigmaOAuthState | null {
@@ -75,20 +88,22 @@ export function parseStateCookie(cookieHeader: string | null): FigmaOAuthState |
   }
 }
 
-export function deleteStateCookie(): string {
-  return [`${STATE_COOKIE}=`, "Path=/", "HttpOnly", "Secure", "SameSite=Lax", "Max-Age=0"].join("; ");
+export function deleteStateCookie(secure: boolean = false): string {
+  const parts = [`${STATE_COOKIE}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
 }
 
-export async function exchangeCodeForToken(code: string): Promise<FigmaOAuthTokens> {
+export async function exchangeCodeForToken(code: string, redirectUriOverride?: string): Promise<FigmaOAuthTokens> {
   const clientId = process.env.FIGMA_CLIENT_ID;
   const clientSecret = process.env.FIGMA_CLIENT_SECRET;
-  const redirectUri = process.env.FIGMA_REDIRECT_URI;
+  const redirectUri = redirectUriOverride || process.env.FIGMA_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error("Figma OAuth credentials not configured");
   }
 
-  const response = await fetch("https://www.figma.com/api/oauth/refresh", {
+  const response = await fetch("https://api.figma.com/v1/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -128,7 +143,7 @@ export async function refreshFigmaToken(refreshToken: string): Promise<FigmaOAut
     throw new Error("Figma OAuth credentials not configured");
   }
 
-  const response = await fetch("https://www.figma.com/api/oauth/refresh", {
+  const response = await fetch("https://api.figma.com/v1/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({

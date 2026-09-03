@@ -25,6 +25,8 @@ import {
   Unlink,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spatial";
 
 type InputSource = "git" | "figma" | "psd" | null;
@@ -35,6 +37,7 @@ export default function DashboardPage() {
   const [gitUrl, setGitUrl] = useState("");
   const [gitToken, setGitToken] = useState("");
   const [figmaUrl, setFigmaUrl] = useState("");
+  const [figmaPat, setFigmaPat] = useState("");
   const [psdFile, setPsdFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
@@ -95,6 +98,7 @@ export default function DashboardPage() {
     setGitUrl("");
     setGitToken("");
     setFigmaUrl("");
+    setFigmaPat("");
     setPsdFile(null);
     setImageFile(null);
     setImageUrl("");
@@ -195,7 +199,7 @@ export default function DashboardPage() {
       const response = await fetch("/api/figma", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileUrl: figmaUrl }),
+        body: JSON.stringify({ fileUrl: figmaUrl, personalAccessToken: figmaPat || undefined }),
       });
 
       if (!response.ok) {
@@ -210,19 +214,22 @@ export default function DashboardPage() {
       const data = await response.json();
       setProgress(50);
 
+      const extractedElements = data.elements || data.components || [];
+      const extractedTokens = data.globalTokens || data.designTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] };
+
       const doc: SpecDocument = {
         source: "figma",
         sourceUrl: figmaUrl,
-        projectName: data.metadata.fileName || "figma-design",
+        projectName: data.metadata?.fileName || "figma-design",
         extraction: {
-          elements: data.components || [],
-          globalTokens: data.designTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] },
+          elements: extractedElements,
+          globalTokens: extractedTokens,
         },
         metadata: {
           extractedAt: new Date().toISOString(),
-          sourceWidth: data.metadata.width,
-          sourceHeight: data.metadata.height,
-          totalElements: data.metadata.totalComponents,
+          sourceWidth: data.metadata?.width || 1920,
+          sourceHeight: data.metadata?.height || 1080,
+          totalElements: data.metadata?.totalComponents || extractedElements.length,
         },
       };
 
@@ -400,18 +407,28 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Link href="/">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Back to Home">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold">Designer by Lavaithan</span>
-            </div>
+            <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+              <Image
+                src="/logo.png"
+                alt="Designer Logo"
+                width={28}
+                height={28}
+                className="h-7 w-7 rounded-lg object-contain shadow-sm"
+                priority
+              />
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg font-bold tracking-tight">Designer</span>
+                <span className="text-xs text-muted-foreground hidden sm:inline">by Lavaithan</span>
+              </div>
+            </Link>
           </div>
           <div className="flex items-center gap-2">
             {figmaConnected && (
@@ -421,10 +438,11 @@ export default function DashboardPage() {
               </Button>
             )}
             {step === "complete" && (
-              <Button variant="outline" onClick={resetState}>
+              <Button variant="outline" size="sm" onClick={resetState}>
                 New Analysis
               </Button>
             )}
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -525,18 +543,23 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle>Figma Design</CardTitle>
                   <CardDescription>
-                    Connect your Figma account to import designs directly.
+                    Connect your Figma account via OAuth 2.0 to import designs directly.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {!figmaChecking && (
                     <>
                       {figmaConnected ? (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                          <Check className="h-4 w-4 text-green-600" />
-                          <span className="text-sm text-green-600 font-medium">
-                            Figma account connected
-                          </span>
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-green-600 font-medium">
+                              Figma account connected (OAuth 2.0)
+                            </span>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={disconnectFigma}>
+                            Disconnect
+                          </Button>
                         </div>
                       ) : (
                         <Button
@@ -545,7 +568,7 @@ export default function DashboardPage() {
                           onClick={connectFigma}
                         >
                           <PenTool className="h-4 w-4 mr-2" />
-                          Connect Figma Account
+                          Connect with Figma (OAuth 2.0)
                         </Button>
                       )}
                     </>
@@ -560,17 +583,32 @@ export default function DashboardPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Figma File URL</label>
                     <Input
-                      placeholder="https://www.figma.com/file/xxxxx/Design"
+                      placeholder="https://www.figma.com/file/xxxxx/Design or https://www.figma.com/design/xxxxx"
                       value={figmaUrl}
                       onChange={(e) => setFigmaUrl(e.target.value)}
                       disabled={isProcessing}
                     />
                   </div>
 
+                  {!figmaConnected && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <label className="text-sm font-medium">
+                        Personal Access Token <span className="text-muted-foreground text-xs">(optional alternative to OAuth)</span>
+                      </label>
+                      <Input
+                        type="password"
+                        placeholder="figd_xxxxxxxxxxxxxxxx"
+                        value={figmaPat}
+                        onChange={(e) => setFigmaPat(e.target.value)}
+                        disabled={isProcessing}
+                      />
+                    </div>
+                  )}
+
                   <Button
                     className="w-full"
                     onClick={handleFigmaAnalyze}
-                    disabled={!figmaUrl || isProcessing || !figmaConnected}
+                    disabled={!figmaUrl || isProcessing || (!figmaConnected && !figmaPat)}
                   >
                     {isProcessing ? (
                       <>

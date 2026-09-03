@@ -1,7 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   GitBranch,
   PenTool,
@@ -17,21 +19,32 @@ import {
 export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Designer by Lavaithan</span>
-          </div>
-          <nav className="flex items-center gap-4">
+      <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+            <Image
+              src="/logo.png"
+              alt="Designer Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-lg object-contain shadow-sm"
+              priority
+            />
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-bold tracking-tight">Designer</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">by Lavaithan</span>
+            </div>
+          </Link>
+          <nav className="flex items-center gap-3">
             <Link href="/dashboard">
-              <Button variant="ghost">Dashboard</Button>
+              <Button variant="ghost" size="sm">Dashboard</Button>
             </Link>
             <Link href="https://github.com/lavaithan/designer" target="_blank">
               <Button variant="outline" size="sm">
                 GitHub
               </Button>
             </Link>
+            <ThemeToggle />
           </nav>
         </div>
       </header>
