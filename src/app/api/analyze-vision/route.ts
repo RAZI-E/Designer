@@ -34,19 +34,46 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildExtractionPrompt();
 
-    const response = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [imagePart, { text: prompt }],
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: extractionResponseSchema,
-      },
-    });
+    // Prioritized list of Gemini vision models with automatic fallback
+    const candidateModels = [
+      process.env.GEMINI_MODEL,
+      "gemini-3.5-flash",
+      "gemini-3.6-flash",
+      "gemini-3.7-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-flash-latest",
+    ].filter(Boolean) as string[];
+
+    let response: any = null;
+    let lastError: any = null;
+    let usedModel = "";
+
+    for (const model of candidateModels) {
+      try {
+        response = await genAI.models.generateContent({
+          model,
+          contents: [
+            {
+              role: "user",
+              parts: [imagePart, { text: prompt }],
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: extractionResponseSchema,
+          },
+        });
+        usedModel = model;
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`Vision model ${model} failed, trying fallback:`, err instanceof Error ? err.message : err);
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error("Failed to generate content with available Gemini models");
+    }
 
     const raw = JSON.parse(response.text || '{"elements":[],"globalTokens":{"colors":{},"fonts":{},"shadows":[],"gradients":[]}}');
 
@@ -65,6 +92,7 @@ export async function POST(request: NextRequest) {
         sourceHeight: imgHeight,
         extractedAt: new Date().toISOString(),
         elementCount: normalizedElements.length,
+        modelUsed: usedModel,
       },
     });
   } catch (error) {
