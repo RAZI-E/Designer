@@ -21,13 +21,13 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">SpecCraft</span>
+            <span className="text-xl font-bold">Designer by Lavaithan</span>
           </div>
           <nav className="flex items-center gap-4">
             <Link href="/dashboard">
               <Button variant="ghost">Dashboard</Button>
             </Link>
-            <Link href="https://github.com/speccraft/speccraft" target="_blank">
+            <Link href="https://github.com/lavaithan/designer" target="_blank">
               <Button variant="outline" size="sm">
                 GitHub
               </Button>
@@ -57,7 +57,7 @@ export default function HomePage() {
                 Get Started <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="https://github.com/speccraft/speccraft" target="_blank">
+            <Link href="https://github.com/lavaithan/designer" target="_blank">
               <Button size="lg" variant="outline">
                 View Source
               </Button>
@@ -181,7 +181,7 @@ export default function HomePage() {
             </p>
             <Link href="/dashboard">
               <Button size="lg" className="gap-2">
-                Launch SpecCraft <ArrowRight className="h-4 w-4" />
+                Launch Designer <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -191,7 +191,7 @@ export default function HomePage() {
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>
-            SpecCraft is open source under the MIT License. Built with Next.js,
+            Designer by Lavaithan is open source under the MIT License. Built with Next.js,
             Tailwind CSS, and Gemini 2.5 Flash.
           </p>
         </div>

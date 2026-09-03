@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SpecCraft - Design to IDE Prompt Converter",
+  title: "Designer by Lavaithan - Design to IDE Prompt Converter",
   description:
     "Convert Git repositories, Figma files, and PSDs into structured, token-efficient IDE prompts with exact component placements and design tokens.",
 };

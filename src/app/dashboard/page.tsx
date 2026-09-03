@@ -456,7 +456,7 @@ export default function DashboardPage() {
             </Link>
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold">SpecCraft</span>
+              <span className="text-lg font-bold">Designer by Lavaithan</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -766,7 +766,7 @@ export default function DashboardPage() {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            downloadFile(generatedPrompt.fullMarkdown, "speccraft-prompt.md")
+                            downloadFile(generatedPrompt.fullMarkdown, "designer-prompt.md")
                           }
                         >
                           <Download className="h-4 w-4 mr-1" />
