@@ -80,7 +80,9 @@ export default function DashboardPage() {
   };
 
   const connectFigma = () => {
-    window.location.href = "/api/figma/authorize?redirect_to=/dashboard?figma_connected=1";
+    const params = new URLSearchParams();
+    params.set("redirect_to", "/dashboard");
+    window.location.href = `/api/figma/authorize?${params.toString()}`;
   };
 
   const disconnectFigma = async () => {

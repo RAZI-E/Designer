@@ -9,7 +9,7 @@ export interface FigmaOAuthTokens {
 }
 
 export interface FigmaOAuthState {
-  code_verifier: string;
+  state: string;
   redirect_to?: string;
 }
 
@@ -17,12 +17,8 @@ const TOKEN_COOKIE = "figma_token";
 const STATE_COOKIE = "figma_state";
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 30;
 
-export function generateCodeVerifier(): string {
-  return crypto.randomBytes(32).toString("base64url");
-}
-
-export function generateCodeChallenge(verifier: string): string {
-  return crypto.createHash("sha256").update(verifier).digest("base64url");
+export function generateRandomState(): string {
+  return crypto.randomBytes(32).toString("hex");
 }
 
 export function serializeTokenCookie(tokens: FigmaOAuthTokens): string {
@@ -83,10 +79,7 @@ export function deleteStateCookie(): string {
   return [`${STATE_COOKIE}=`, "Path=/", "HttpOnly", "Secure", "SameSite=Lax", "Max-Age=0"].join("; ");
 }
 
-export async function exchangeCodeForToken(
-  code: string,
-  codeVerifier: string
-): Promise<FigmaOAuthTokens> {
+export async function exchangeCodeForToken(code: string): Promise<FigmaOAuthTokens> {
   const clientId = process.env.FIGMA_CLIENT_ID;
   const clientSecret = process.env.FIGMA_CLIENT_SECRET;
   const redirectUri = process.env.FIGMA_REDIRECT_URI;
@@ -104,7 +97,6 @@ export async function exchangeCodeForToken(
       redirect_uri: redirectUri,
       code,
       grant_type: "authorization_code",
-      code_verifier: codeVerifier,
     }),
   });
 

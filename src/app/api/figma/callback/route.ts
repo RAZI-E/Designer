@@ -9,38 +9,38 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
+  const returnedState = searchParams.get("state");
 
   const dashboardUrl = new URL("/dashboard", request.url);
 
   if (error) {
-    const desc = searchParams.get("error_description") || error;
-    dashboardUrl.searchParams.set("figma_error", desc);
+    const msg = errorDescription || error;
+    dashboardUrl.searchParams.set("figma_error", msg);
     const resp = NextResponse.redirect(dashboardUrl);
     resp.headers.append("Set-Cookie", deleteStateCookie());
     return resp;
   }
 
   if (!code) {
-    dashboardUrl.searchParams.set("figma_error", "No authorization code received");
+    dashboardUrl.searchParams.set("figma_error", "No authorization code received from Figma. Please try again.");
     const resp = NextResponse.redirect(dashboardUrl);
     resp.headers.append("Set-Cookie", deleteStateCookie());
     return resp;
   }
 
-  const state = parseStateCookie(request.headers.get("cookie"));
-  const codeVerifier = state?.code_verifier;
-  const redirectTo = state?.redirect_to || "/dashboard";
+  const stateCookie = parseStateCookie(request.headers.get("cookie"));
+  const redirectTo = stateCookie?.redirect_to || "/dashboard";
 
-  if (!codeVerifier) {
-    const errUrl = new URL("/dashboard", request.url);
-    errUrl.searchParams.set("figma_error", "OAuth state expired. Please try again.");
-    const resp = NextResponse.redirect(errUrl);
+  if (stateCookie && returnedState && stateCookie.state !== returnedState) {
+    dashboardUrl.searchParams.set("figma_error", "State mismatch. The request may have been tampered with. Please try again.");
+    const resp = NextResponse.redirect(dashboardUrl);
     resp.headers.append("Set-Cookie", deleteStateCookie());
     return resp;
   }
 
   try {
-    const tokens = await exchangeCodeForToken(code, codeVerifier);
+    const tokens = await exchangeCodeForToken(code);
 
     const successUrl = new URL(redirectTo, request.url);
     successUrl.searchParams.set("figma_connected", "1");
@@ -54,9 +54,9 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (err) {
     console.error("Figma OAuth callback error:", err);
-    const errUrl = new URL("/dashboard", request.url);
-    errUrl.searchParams.set("figma_error", err instanceof Error ? err.message : "Authentication failed");
-    const resp = NextResponse.redirect(errUrl);
+    const errMsg = err instanceof Error ? err.message : "Authentication failed";
+    dashboardUrl.searchParams.set("figma_error", errMsg);
+    const resp = NextResponse.redirect(dashboardUrl);
     resp.headers.append("Set-Cookie", deleteStateCookie());
     return resp;
   }
