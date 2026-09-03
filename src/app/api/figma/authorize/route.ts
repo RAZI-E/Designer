@@ -26,13 +26,15 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const redirectTo = searchParams.get("redirect_to") || "/dashboard";
+  const customScope = searchParams.get("scope");
+  const scope = customScope || process.env.FIGMA_OAUTH_SCOPE || "file_content:read";
 
   const state = generateRandomState();
 
   const figmaAuthUrl = new URL("https://www.figma.com/oauth");
   figmaAuthUrl.searchParams.set("client_id", clientId);
   figmaAuthUrl.searchParams.set("redirect_uri", redirectUri);
-  figmaAuthUrl.searchParams.set("scope", "file_read");
+  figmaAuthUrl.searchParams.set("scope", scope);
   figmaAuthUrl.searchParams.set("state", state);
   figmaAuthUrl.searchParams.set("response_type", "code");
 

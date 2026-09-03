@@ -815,28 +815,28 @@ export default function DashboardPage() {
                       <TabsContent value="viewport">
                         <Textarea
                           readOnly
-                          className="min-h-[400px] font-mono text-xs"
+                          className="min-h-100 font-mono text-xs"
                           value={generatedPrompt.viewportSetup}
                         />
                       </TabsContent>
                       <TabsContent value="spatial">
                         <Textarea
                           readOnly
-                          className="min-h-[400px] font-mono text-xs"
+                          className="min-h-100 font-mono text-xs"
                           value={generatedPrompt.spatialMatrix}
                         />
                       </TabsContent>
                       <TabsContent value="effects">
                         <Textarea
                           readOnly
-                          className="min-h-[400px] font-mono text-xs"
+                          className="min-h-100 font-mono text-xs"
                           value={generatedPrompt.microEffects}
                         />
                       </TabsContent>
                       <TabsContent value="responsive">
                         <Textarea
                           readOnly
-                          className="min-h-[400px] font-mono text-xs"
+                          className="min-h-100 font-mono text-xs"
                           value={generatedPrompt.responsiveRules}
                         />
                       </TabsContent>
@@ -844,7 +844,7 @@ export default function DashboardPage() {
                         <div className="space-y-2">
                           <Textarea
                             readOnly
-                            className="min-h-[300px] font-mono text-xs"
+                            className="min-h-75 font-mono text-xs"
                             value={generatedPrompt.codeGenerationSteps}
                           />
                           <Button
@@ -871,7 +871,7 @@ export default function DashboardPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    <div className="space-y-2 max-h-75 overflow-y-auto">
                       {specDocument?.extraction.elements.map((el) => (
                         <div
                           key={el.id}
