@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FigmaProjectSelector } from "@/components/figma/figma-project-selector";
 import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spatial";
 
 type InputSource = "git" | "figma" | "psd" | null;
@@ -189,8 +190,10 @@ export default function DashboardPage() {
     }
   };
 
-  const handleFigmaAnalyze = async () => {
-    if (!figmaUrl) return;
+  const handleFigmaAnalyze = async (urlOverride?: string) => {
+    const targetUrl = urlOverride || figmaUrl;
+    if (!targetUrl) return;
+    setFigmaUrl(targetUrl);
     setStep("extracting");
     setProgress(20);
     setError(null);
@@ -199,7 +202,7 @@ export default function DashboardPage() {
       const response = await fetch("/api/figma", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileUrl: figmaUrl, personalAccessToken: figmaPat || undefined }),
+        body: JSON.stringify({ fileUrl: targetUrl, personalAccessToken: figmaPat || undefined }),
       });
 
       if (!response.ok) {
@@ -219,7 +222,7 @@ export default function DashboardPage() {
 
       const doc: SpecDocument = {
         source: "figma",
-        sourceUrl: figmaUrl,
+        sourceUrl: targetUrl,
         projectName: data.metadata?.fileName || "figma-design",
         extraction: {
           elements: extractedElements,
@@ -232,6 +235,29 @@ export default function DashboardPage() {
           totalElements: data.metadata?.totalComponents || extractedElements.length,
         },
       };
+
+      // Save to recent projects
+      try {
+        const fileKeyMatch = targetUrl.match(/figma\.com\/(?:design|file)\/([a-zA-Z0-9]+)/);
+        if (fileKeyMatch) {
+          const key = fileKeyMatch[1];
+          const stored = localStorage.getItem("ep_recent_figma_projects");
+          const recents = stored ? JSON.parse(stored) : [];
+          const newItem = {
+            id: key,
+            fileKey: key,
+            name: data.metadata?.fileName || "Figma Design",
+            url: targetUrl,
+            projectName: "Figma File",
+            lastModified: new Date().toISOString(),
+            isRecent: true,
+          };
+          const updated = [newItem, ...recents.filter((r: any) => r.fileKey !== key)].slice(0, 15);
+          localStorage.setItem("ep_recent_figma_projects", JSON.stringify(updated));
+        }
+      } catch (err) {
+        console.warn("Could not save to recent Figma projects:", err);
+      }
 
       setSpecDocument(doc);
       setProgress(70);
@@ -541,87 +567,92 @@ export default function DashboardPage() {
             {source === "figma" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Figma Design</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <PenTool className="h-5 w-5 text-indigo-500" />
+                    Figma Design
+                  </CardTitle>
                   <CardDescription>
-                    Connect your Figma account via OAuth 2.0 to import designs directly.
+                    Select and import projects from your Figma workspace or paste a design link to convert into structured IDE prompts.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {!figmaChecking && (
-                    <>
-                      {figmaConnected ? (
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                          <div className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-600" />
-                            <span className="text-sm text-green-600 font-medium">
-                              Figma account connected (OAuth 2.0)
-                            </span>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={disconnectFigma}>
-                            Disconnect
-                          </Button>
+                  {figmaChecking ? (
+                    <div className="flex items-center justify-center p-8 text-sm text-muted-foreground gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      Checking Figma connection...
+                    </div>
+                  ) : figmaConnected ? (
+                    <FigmaProjectSelector
+                      onSelectProject={(url) => handleFigmaAnalyze(url)}
+                      onDisconnect={disconnectFigma}
+                      isProcessing={isProcessing}
+                      activeProcessingUrl={figmaUrl}
+                    />
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-6 rounded-xl border border-dashed border-border/80 bg-muted/20 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                          <PenTool className="h-6 w-6" />
                         </div>
-                      ) : (
+                        <div className="space-y-1">
+                          <h3 className="font-semibold text-sm">Connect your Figma Workspace</h3>
+                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                            Authorize via OAuth 2.0 to access your Figma projects menu, browse designs, and convert them to blueprint prompts with one click.
+                          </p>
+                        </div>
                         <Button
-                          variant="outline"
-                          className="w-full"
+                          className="w-full sm:w-auto"
                           onClick={connectFigma}
                         >
                           <PenTool className="h-4 w-4 mr-2" />
                           Connect with Figma (OAuth 2.0)
                         </Button>
-                      )}
-                    </>
-                  )}
-                  {figmaChecking && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Checking Figma connection...
+                      </div>
+
+                      <div className="space-y-3 pt-2 border-t">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Or Import by Figma File URL</label>
+                          <Input
+                            placeholder="https://www.figma.com/file/xxxxx/Design or https://www.figma.com/design/xxxxx"
+                            value={figmaUrl}
+                            onChange={(e) => setFigmaUrl(e.target.value)}
+                            disabled={isProcessing}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            Personal Access Token <span className="text-muted-foreground text-xs">(optional alternative to OAuth)</span>
+                          </label>
+                          <Input
+                            type="password"
+                            placeholder="figd_xxxxxxxxxxxxxxxx"
+                            value={figmaPat}
+                            onChange={(e) => setFigmaPat(e.target.value)}
+                            disabled={isProcessing}
+                          />
+                        </div>
+
+                        <Button
+                          className="w-full"
+                          onClick={() => handleFigmaAnalyze()}
+                          disabled={!figmaUrl || isProcessing || (!figmaConnected && !figmaPat)}
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <PenTool className="h-4 w-4 mr-2" />
+                              Analyze Figma File
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Figma File URL</label>
-                    <Input
-                      placeholder="https://www.figma.com/file/xxxxx/Design or https://www.figma.com/design/xxxxx"
-                      value={figmaUrl}
-                      onChange={(e) => setFigmaUrl(e.target.value)}
-                      disabled={isProcessing}
-                    />
-                  </div>
-
-                  {!figmaConnected && (
-                    <div className="space-y-2 pt-2 border-t">
-                      <label className="text-sm font-medium">
-                        Personal Access Token <span className="text-muted-foreground text-xs">(optional alternative to OAuth)</span>
-                      </label>
-                      <Input
-                        type="password"
-                        placeholder="figd_xxxxxxxxxxxxxxxx"
-                        value={figmaPat}
-                        onChange={(e) => setFigmaPat(e.target.value)}
-                        disabled={isProcessing}
-                      />
-                    </div>
-                  )}
-
-                  <Button
-                    className="w-full"
-                    onClick={handleFigmaAnalyze}
-                    disabled={!figmaUrl || isProcessing || (!figmaConnected && !figmaPat)}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <PenTool className="h-4 w-4 mr-2" />
-                        Analyze Figma File
-                      </>
-                    )}
-                  </Button>
                 </CardContent>
               </Card>
             )}
