@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,14 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   GitBranch,
   PenTool,
@@ -30,9 +22,10 @@ import {
   Eye,
   Code2,
   FileText,
+  Unlink,
 } from "lucide-react";
 import Link from "next/link";
-import type { SpecDocument, SpecComponent, GeneratedPrompt } from "@/lib/types/spec-dsl";
+import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spec-dsl";
 
 type InputSource = "git" | "figma" | "psd" | null;
 type ProcessingStep = "idle" | "extracting" | "analyzing" | "generating" | "complete";
@@ -42,7 +35,6 @@ export default function DashboardPage() {
   const [gitUrl, setGitUrl] = useState("");
   const [gitToken, setGitToken] = useState("");
   const [figmaUrl, setFigmaUrl] = useState("");
-  const [figmaToken, setFigmaToken] = useState("");
   const [psdFile, setPsdFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
 
@@ -53,15 +45,53 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [figmaConnected, setFigmaConnected] = useState(false);
+  const [figmaChecking, setFigmaChecking] = useState(true);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    checkFigmaAuth();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("figma_error")) {
+      setError(params.get("figma_error"));
+      window.history.replaceState({}, "", "/dashboard");
+    }
+    if (params.get("figma_connected")) {
+      setFigmaConnected(true);
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, []);
+
+  const checkFigmaAuth = async () => {
+    try {
+      const res = await fetch("/api/figma/token");
+      if (res.ok) {
+        const data = await res.json();
+        setFigmaConnected(data.authenticated && !data.expired);
+      }
+    } catch {
+      setFigmaConnected(false);
+    } finally {
+      setFigmaChecking(false);
+    }
+  };
+
+  const connectFigma = () => {
+    window.location.href = "/api/figma/authorize?redirect_to=/dashboard?figma_connected=1";
+  };
+
+  const disconnectFigma = async () => {
+    await fetch("/api/figma/revoke", { method: "POST" });
+    setFigmaConnected(false);
+  };
 
   const resetState = useCallback(() => {
     setSource(null);
     setGitUrl("");
     setGitToken("");
     setFigmaUrl("");
-    setFigmaToken("");
     setPsdFile(null);
     setImageUrl("");
     setStep("idle");
@@ -167,11 +197,15 @@ export default function DashboardPage() {
       const response = await fetch("/api/figma", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileUrl: figmaUrl, token: figmaToken || undefined }),
+        body: JSON.stringify({ fileUrl: figmaUrl }),
       });
 
       if (!response.ok) {
         const data = await response.json();
+        if (data.needsAuth) {
+          setFigmaConnected(false);
+          throw new Error("Please connect your Figma account first.");
+        }
         throw new Error(data.error || "Failed to parse Figma file");
       }
 
@@ -425,11 +459,19 @@ export default function DashboardPage() {
               <span className="text-lg font-bold">SpecCraft</span>
             </div>
           </div>
-          {step === "complete" && (
-            <Button variant="outline" onClick={resetState}>
-              New Analysis
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {figmaConnected && (
+              <Button variant="ghost" size="sm" onClick={disconnectFigma}>
+                <Unlink className="h-4 w-4 mr-1" />
+                Disconnect Figma
+              </Button>
+            )}
+            {step === "complete" && (
+              <Button variant="outline" onClick={resetState}>
+                New Analysis
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -493,7 +535,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      GitHub Token <span className="text-muted-foreground">(optional)</span>
+                      GitHub Token <span className="text-muted-foreground">(optional, for private repos)</span>
                     </label>
                     <Input
                       type="password"
@@ -528,8 +570,39 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Figma Design</CardTitle>
+                  <CardDescription>
+                    Connect your Figma account to import designs directly.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {!figmaChecking && (
+                    <>
+                      {figmaConnected ? (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                          <Check className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-green-600 font-medium">
+                            Figma account connected
+                          </span>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={connectFigma}
+                        >
+                          <PenTool className="h-4 w-4 mr-2" />
+                          Connect Figma Account
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  {figmaChecking && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Checking Figma connection...
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Figma File URL</label>
                     <Input
@@ -539,22 +612,11 @@ export default function DashboardPage() {
                       disabled={isProcessing}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Personal Access Token <span className="text-muted-foreground">(optional)</span>
-                    </label>
-                    <Input
-                      type="password"
-                      placeholder="figd_xxxxxxxxxxxx"
-                      value={figmaToken}
-                      onChange={(e) => setFigmaToken(e.target.value)}
-                      disabled={isProcessing}
-                    />
-                  </div>
+
                   <Button
                     className="w-full"
                     onClick={handleFigmaAnalyze}
-                    disabled={!figmaUrl || isProcessing}
+                    disabled={!figmaUrl || isProcessing || !figmaConnected}
                   >
                     {isProcessing ? (
                       <>
@@ -713,7 +775,7 @@ export default function DashboardPage() {
                       </div>
                     </CardTitle>
                     <CardDescription>
-                      {generatedPrompt.chunks.length} chunks • ~
+                      {generatedPrompt.chunks.length} chunks &bull; ~
                       {generatedPrompt.chunks.reduce((s, c) => s + c.tokenEstimate, 0)} tokens
                     </CardDescription>
                   </CardHeader>

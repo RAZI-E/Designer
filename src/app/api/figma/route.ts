@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseFigmaFile } from "@/lib/parsers/figma-parser";
+import { getValidFigmaToken } from "@/lib/figma/oauth";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { fileUrl, token } = body;
+    const { fileUrl } = body;
 
     if (!fileUrl) {
       return NextResponse.json(
         { error: "Figma file URL is required" },
-        { status: 400 }
-      );
-    }
-
-    const figmaToken = token || process.env.FIGMA_PERSONAL_ACCESS_TOKEN;
-    if (!figmaToken) {
-      return NextResponse.json(
-        { error: "Figma Personal Access Token is required" },
         { status: 400 }
       );
     }
@@ -31,11 +24,21 @@ export async function POST(request: NextRequest) {
 
     const fileId = fileIdMatch[1];
 
+    let accessToken: string;
+    try {
+      accessToken = await getValidFigmaToken(request.headers.get("cookie"));
+    } catch {
+      return NextResponse.json(
+        { error: "Not authenticated with Figma. Please connect your account first.", needsAuth: true },
+        { status: 401 }
+      );
+    }
+
     const response = await fetch(
       `https://api.figma.com/v1/files/${fileId}?geometry=paths`,
       {
         headers: {
-          "X-Figma-Token": figmaToken,
+          "X-Figma-Token": accessToken,
         },
       }
     );
