@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { deleteTokenCookie } from "@/lib/figma/oauth";
 
 export async function POST() {
   const response = NextResponse.json({ success: true });
-  response.headers.append("Set-Cookie", deleteTokenCookie());
+  response.headers.append("Set-Cookie", (
+    "figma_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
+  ));
   return response;
 }

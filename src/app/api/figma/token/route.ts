@@ -6,10 +6,7 @@ export async function GET(request: NextRequest) {
   const tokens = parseTokenCookie(cookieHeader);
 
   if (!tokens) {
-    return NextResponse.json(
-      { authenticated: false },
-      { status: 401 }
-    );
+    return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 
   const isExpired = Date.now() >= tokens.expires_at;
