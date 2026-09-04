@@ -537,11 +537,11 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <PenTool className="h-5 w-5 text-indigo-500" />
+                    <PenTool className="h-5 w-5 text-primary" />
                     Figma Design
                   </CardTitle>
                   <CardDescription>
-                    Select and import projects from your Figma workspace or paste a design link to convert into structured IDE prompts.
+                    Import workspace projects or paste a Figma link to extract layout borders and components.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -560,13 +560,13 @@ export default function DashboardPage() {
                   ) : (
                     <div className="space-y-4">
                       <div className="p-6 rounded-xl border border-dashed border-border/80 bg-muted/20 text-center space-y-3">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
-                          <PenTool className="h-6 w-6" />
+                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                          <PenTool className="h-5 w-5" />
                         </div>
                         <div className="space-y-1">
-                          <h3 className="font-semibold text-sm">Connect your Figma Workspace</h3>
+                          <h3 className="font-semibold text-sm">Connect Figma</h3>
                           <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                            Authorize via OAuth 2.0 to access your Figma projects menu, browse designs, and convert them to blueprint prompts with one click.
+                            Authorize with OAuth 2.0 to access your Figma files and generate blueprints directly.
                           </p>
                         </div>
                         <Button
@@ -574,28 +574,28 @@ export default function DashboardPage() {
                           onClick={connectFigma}
                         >
                           <PenTool className="h-4 w-4 mr-2" />
-                          Connect with Figma (OAuth 2.0)
+                          Connect Figma
                         </Button>
                       </div>
 
                       <div className="space-y-3 pt-2 border-t">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Or Import by Figma File URL</label>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-foreground">Or Import by File URL</label>
                           <Input
-                            placeholder="https://www.figma.com/file/xxxxx/Design or https://www.figma.com/design/xxxxx"
+                            placeholder="https://www.figma.com/design/..."
                             value={figmaUrl}
                             onChange={(e) => setFigmaUrl(e.target.value)}
                             disabled={isProcessing}
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">
-                            Personal Access Token <span className="text-muted-foreground text-xs">(optional alternative to OAuth)</span>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Personal Access Token <span className="text-[11px] opacity-70">(optional)</span>
                           </label>
                           <Input
                             type="password"
-                            placeholder="figd_xxxxxxxxxxxxxxxx"
+                            placeholder="figd_..."
                             value={figmaPat}
                             onChange={(e) => setFigmaPat(e.target.value)}
                             disabled={isProcessing}

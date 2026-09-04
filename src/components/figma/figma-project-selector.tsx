@@ -368,7 +368,7 @@ export function FigmaProjectSelector({
               </span>
             </div>
             <p className="text-xs text-muted-foreground truncate max-w-55 sm:max-w-xs">
-              {userData?.email || "Browse and select any project to generate IDE prompts"}
+              {userData?.email || "Select a project to generate blueprint prompts"}
             </p>
           </div>
         </div>
@@ -402,7 +402,7 @@ export function FigmaProjectSelector({
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
             <FolderSync className="h-3.5 w-3.5 text-primary" />
-            Sync Team Projects or Paste Design Link
+            Add Team or File Link
           </label>
           <button
             type="button"
@@ -410,19 +410,19 @@ export function FigmaProjectSelector({
             className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
           >
             <HelpCircle className="h-3 w-3" />
-            Where do I find this?
+            Help
           </button>
         </div>
 
         {showTeamHelp && (
           <div className="p-2.5 rounded-lg bg-background/60 border text-[11px] text-muted-foreground space-y-1 leading-relaxed">
-            <p className="text-foreground font-medium">How to get your projects:</p>
+            <p className="text-foreground font-medium">Supported links:</p>
             <ul className="list-disc list-inside space-y-0.5">
               <li>
-                <strong>Team Projects:</strong> In Figma, open your Team page from the sidebar and copy the URL (e.g. <code className="text-foreground">figma.com/files/team/123456789/...</code>). All projects in that team will be loaded automatically.
+                <strong>Team:</strong> <code className="text-foreground">figma.com/files/team/123456...</code>
               </li>
               <li>
-                <strong>Direct File:</strong> Or copy any design file link (e.g. <code className="text-foreground">figma.com/design/XXXXX/My-Project</code>). It will be fetched and saved to your project menu.
+                <strong>File:</strong> <code className="text-foreground">figma.com/design/XXXXX/...</code>
               </li>
             </ul>
           </div>
@@ -430,7 +430,7 @@ export function FigmaProjectSelector({
 
         <div className="flex gap-2">
           <Input
-            placeholder="Paste Team link (figma.com/files/team/...), Project link, or File URL"
+            placeholder="figma.com/design/... or team link"
             value={syncInput}
             onChange={(e) => setSyncInput(e.target.value)}
             className="h-9 text-xs font-mono"

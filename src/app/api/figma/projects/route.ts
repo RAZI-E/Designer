@@ -28,8 +28,8 @@ function extractFigmaIdentifiers(urlOrId: string): {
   const teamMatch = str.match(/figma\.com\/(?:files\/)?team\/([0-9]+)/i);
   if (teamMatch) return { type: "team", id: teamMatch[1] };
 
-  // Project URL: figma.com/files/project/123456...
-  const projectMatch = str.match(/figma\.com\/files\/project\/([0-9]+)/i);
+  // Project URL: figma.com/files/project/123456... or figma.com/project/123456
+  const projectMatch = str.match(/figma\.com\/(?:files\/)?project\/([0-9]+)/i);
   if (projectMatch) return { type: "project", id: projectMatch[1] };
 
   // File / Design URL: figma.com/file/KEY/... or figma.com/design/KEY/...
@@ -117,6 +117,9 @@ async function fetchTeamProjectsAndFiles(
           console.warn(`Failed to fetch files for project ${proj.id}:`, err);
         }
       }
+    } else {
+      const errJson = await teamRes.json().catch(() => ({}));
+      console.warn(`Figma team ${teamId} fetch returned ${teamRes.status}:`, errJson);
     }
   } catch (err) {
     console.warn(`Failed to fetch team ${teamId}:`, err);
@@ -139,6 +142,9 @@ async function fetchSingleFileMeta(
         project_name: "Workspace File",
         url: `https://www.figma.com/design/${fileKey}`,
       };
+    } else {
+      const err = await res.json().catch(() => ({}));
+      console.warn(`Figma API file fetch error for ${fileKey}: status ${res.status}`, err);
     }
   } catch (e) {
     console.warn(`Failed to fetch meta for file ${fileKey}:`, e);

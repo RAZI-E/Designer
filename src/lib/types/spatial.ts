@@ -102,6 +102,8 @@ export interface ElementSpatialNode {
   id: string;
   name: string;
   semanticTag: SemanticTag;
+  textContent?: string;
+  componentType?: string;
 
   layout: {
     desktop_16_9: DesktopLayout;
