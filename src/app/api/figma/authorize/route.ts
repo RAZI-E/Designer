@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const redirectTo = searchParams.get("redirect_to") || "/dashboard";
   const customScope = searchParams.get("scope");
-  const scope = customScope || process.env.FIGMA_OAUTH_SCOPE || "file_content:read";
+  const scope = customScope || process.env.FIGMA_OAUTH_SCOPE || "file_content:read,projects:read";
 
   const state = generateRandomState();
 
