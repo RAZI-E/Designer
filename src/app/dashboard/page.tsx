@@ -538,17 +538,29 @@ export default function DashboardPage() {
             {source === "figma" && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PenTool className="h-5 w-5 text-primary" />
-                    Figma Design
-                  </CardTitle>
-                  <CardDescription>
-                    Import workspace projects or paste a Figma link to extract layout borders and components.
-                  </CardDescription>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                        <PenTool className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-sm sm:text-base font-semibold">Figma Design</CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground truncate">
+                          Import workspace files or paste a direct design link
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {figmaConnected && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Connected
+                      </span>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {figmaChecking ? (
-                    <div className="flex items-center justify-center p-8 text-sm text-muted-foreground gap-2">
+                    <div className="flex items-center justify-center p-8 text-xs text-muted-foreground gap-2">
                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       Checking Figma connection...
                     </div>
@@ -560,64 +572,63 @@ export default function DashboardPage() {
                       activeProcessingUrl={figmaUrl}
                     />
                   ) : (
-                    <div className="space-y-4">
-                      <div className="p-6 rounded-xl border border-dashed border-border/80 bg-muted/20 text-center space-y-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
-                          <PenTool className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-1">
-                          <h3 className="font-semibold text-sm">Connect Figma</h3>
-                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                            Authorize with OAuth 2.0 to access your Figma files and generate blueprints directly.
-                          </p>
+                    <div className="space-y-3.5">
+                      {/* Minimal Connect Banner */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl border border-primary/20 bg-primary/5">
+                        <div className="space-y-0.5 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-foreground">Connect Figma Account</p>
+                          <p className="text-[11px] text-muted-foreground">Browse your teams, files, and recent designs directly</p>
                         </div>
                         <Button
-                          className="w-full sm:w-auto"
+                          size="sm"
                           onClick={connectFigma}
+                          className="w-full sm:w-auto h-8 px-3 text-xs font-medium shrink-0 shadow-xs"
                         >
-                          <PenTool className="h-4 w-4 mr-2" />
+                          <PenTool className="h-3.5 w-3.5 mr-1.5" />
                           Connect Figma
                         </Button>
                       </div>
 
-                      <div className="space-y-3 pt-2 border-t">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-foreground">Or Import by File URL</label>
-                          <Input
-                            placeholder="https://www.figma.com/design/..."
-                            value={figmaUrl}
-                            onChange={(e) => setFigmaUrl(e.target.value)}
-                            disabled={isProcessing}
-                          />
-                        </div>
+                      {/* Minimal Divider */}
+                      <div className="relative flex items-center py-0.5">
+                        <div className="grow border-t border-border/60" />
+                        <span className="shrink-0 px-2.5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">or import link</span>
+                        <div className="grow border-t border-border/60" />
+                      </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-muted-foreground">
-                            Personal Access Token <span className="text-[11px] opacity-70">(optional)</span>
-                          </label>
-                          <Input
-                            type="password"
-                            placeholder="figd_..."
-                            value={figmaPat}
-                            onChange={(e) => setFigmaPat(e.target.value)}
-                            disabled={isProcessing}
-                          />
-                        </div>
+                      {/* Direct URL and PAT Inputs */}
+                      <div className="space-y-2.5">
+                        <Input
+                          placeholder="https://www.figma.com/design/..."
+                          value={figmaUrl}
+                          onChange={(e) => setFigmaUrl(e.target.value)}
+                          disabled={isProcessing}
+                          className="h-9 text-xs font-mono"
+                        />
+
+                        <Input
+                          type="password"
+                          placeholder="Personal Access Token (optional, for private files)"
+                          value={figmaPat}
+                          onChange={(e) => setFigmaPat(e.target.value)}
+                          disabled={isProcessing}
+                          className="h-8 text-xs font-mono"
+                        />
 
                         <Button
-                          className="w-full"
+                          className="w-full h-9 text-xs font-medium"
                           onClick={() => handleFigmaAnalyze()}
                           disabled={!figmaUrl || isProcessing || (!figmaConnected && !figmaPat)}
                         >
                           {isProcessing ? (
                             <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Analyzing...
+                              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                              Extracting Blueprint...
                             </>
                           ) : (
                             <>
-                              <PenTool className="h-4 w-4 mr-2" />
-                              Analyze Figma File
+                              <PenTool className="h-3.5 w-3.5 mr-1.5" />
+                              Extract Blueprint
                             </>
                           )}
                         </Button>
