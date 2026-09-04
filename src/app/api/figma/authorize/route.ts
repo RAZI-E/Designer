@@ -15,33 +15,23 @@ const VALID_FIGMA_SCOPES = new Set([
 ]);
 
 export function sanitizeScope(scopeStr?: string | null): string {
-  if (!scopeStr) return "file_content:read,current_user:read";
+  if (!scopeStr) return "file_content:read";
   const filtered = scopeStr
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter((s) => VALID_FIGMA_SCOPES.has(s));
-  return filtered.length > 0 ? filtered.join(",") : "file_content:read,current_user:read";
+  return filtered.length > 0 ? filtered.join(",") : "file_content:read";
 }
 
 export function resolveRedirectUri(request: NextRequest): string {
   const customRedirect = request.nextUrl.searchParams.get("redirect_uri");
   if (customRedirect) return customRedirect;
 
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || request.nextUrl.host;
-  const isLocal =
-    host.includes("localhost") ||
-    host.includes("127.0.0.1") ||
-    host.startsWith("192.168.") ||
-    host.startsWith("10.") ||
-    host.startsWith("172.") ||
-    host.endsWith(".local");
-
-  if (isLocal) {
-    const proto = request.headers.get("x-forwarded-proto") || (request.nextUrl.protocol.replace(":", "")) || "http";
-    return `${proto}://${host}/api/figma/callback`;
+  if (process.env.FIGMA_REDIRECT_URI) {
+    return process.env.FIGMA_REDIRECT_URI;
   }
 
-  return process.env.FIGMA_REDIRECT_URI || `${request.nextUrl.origin}/api/figma/callback`;
+  return `${request.nextUrl.origin}/api/figma/callback`;
 }
 
 export async function GET(request: NextRequest) {
@@ -58,7 +48,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const redirectTo = searchParams.get("redirect_to") || "/dashboard";
   const customScope = searchParams.get("scope");
-  const rawScope = customScope || process.env.FIGMA_OAUTH_SCOPE || "file_content:read,current_user:read";
+  const rawScope = customScope || process.env.FIGMA_OAUTH_SCOPE || "file_content:read";
   const scope = sanitizeScope(rawScope);
 
   const state = generateRandomState();

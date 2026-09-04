@@ -147,10 +147,12 @@ export default function DashboardPage() {
     }
   };
 
+  const [selectedOauthScope, setSelectedOauthScope] = useState<"file_content:read" | "files:read">("file_content:read");
+
   const connectFigma = (scopeOverride?: string) => {
     const params = new URLSearchParams();
     params.set("redirect_to", "/dashboard");
-    if (scopeOverride) params.set("scope", scopeOverride);
+    params.set("scope", scopeOverride || selectedOauthScope);
     window.location.href = `/api/figma/authorize?${params.toString()}`;
   };
 
@@ -646,26 +648,56 @@ export default function DashboardPage() {
                         </div>
 
                         {connectMethod === "oauth" ? (
-                          <div className="space-y-2 pt-1 border-t border-border/40">
+                          <div className="space-y-2.5 pt-1 border-t border-border/40">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
+                              <span className="text-muted-foreground text-[11px] font-medium">OAuth Scope:</span>
+                              <div className="flex items-center gap-1 bg-muted/70 p-0.5 rounded border border-border/60 text-[10px]">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedOauthScope("file_content:read")}
+                                  className={`px-2 py-0.5 rounded transition-all font-mono ${
+                                    selectedOauthScope === "file_content:read"
+                                      ? "bg-background text-foreground font-semibold shadow-xs"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  file_content:read (Standard)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedOauthScope("files:read")}
+                                  className={`px-2 py-0.5 rounded transition-all font-mono ${
+                                    selectedOauthScope === "files:read"
+                                      ? "bg-background text-foreground font-semibold shadow-xs"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  files:read (Legacy)
+                                </button>
+                              </div>
+                            </div>
+
                             <Button
                               size="sm"
-                              onClick={() => connectFigma()}
-                              className="w-full h-8 text-xs font-medium shadow-xs"
+                              onClick={() => connectFigma(selectedOauthScope)}
+                              className="w-full h-8.5 text-xs font-medium shadow-xs"
                             >
                               <PenTool className="h-3.5 w-3.5 mr-1.5" />
-                              Authorize with Figma (1-Click)
+                              Authorize with Figma ({selectedOauthScope})
                             </Button>
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground px-0.5">
-                              <span>Scope: file_content:read, current_user:read</span>
-                              <button
-                                type="button"
-                                onClick={() => connectFigma("files:read")}
-                                className="underline hover:text-foreground"
-                                title="Try legacy scope if your Figma app uses files:read"
+
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                              If Figma reports <em>&quot;Invalid scopes for app&quot;</em>, your app in{" "}
+                              <a
+                                href="https://www.figma.com/developers/apps"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline text-primary hover:opacity-80"
                               >
-                                Use files:read fallback
-                              </button>
-                            </div>
+                                Figma Developer Hub
+                              </a>{" "}
+                              has a different scope enabled. Switch to the matching scope above, or use <strong>Token</strong> mode for instant access on any device.
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-2 pt-1 border-t border-border/40">
