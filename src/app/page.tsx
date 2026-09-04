@@ -39,7 +39,7 @@ export default function HomePage() {
             <Link href="/dashboard">
               <Button variant="ghost" size="sm">Dashboard</Button>
             </Link>
-            <Link href="https://github.com/lavaithan/designer" target="_blank">
+            <Link href="https://github.com/RAZI-E/Designer" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">
                 GitHub
               </Button>
@@ -70,7 +70,7 @@ export default function HomePage() {
                 Get Started <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="https://github.com/lavaithan/designer" target="_blank">
+            <Link href="https://github.com/RAZI-E/Designer" target="_blank" rel="noopener noreferrer">
               <Button size="lg" variant="outline">
                 View Source
               </Button>
