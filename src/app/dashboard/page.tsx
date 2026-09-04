@@ -80,6 +80,10 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const [patConnecting, setPatConnecting] = useState(false);
+  const [patError, setPatError] = useState<string | null>(null);
+  const [connectMethod, setConnectMethod] = useState<"oauth" | "pat">("oauth");
+
   useEffect(() => {
     checkFigmaAuth();
     const params = new URLSearchParams(window.location.search);
@@ -93,12 +97,48 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const connectFigmaPat = async (tokenToUse?: string) => {
+    const token = (tokenToUse || figmaPat).trim();
+    if (!token) return;
+    setPatConnecting(true);
+    setPatError(null);
+    try {
+      const res = await fetch("/api/figma/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid Personal Access Token");
+      }
+      setFigmaConnected(true);
+      setFigmaPat(token);
+      localStorage.setItem("ep_figma_pat", token);
+    } catch (err) {
+      setPatError(err instanceof Error ? err.message : "Failed to connect with token");
+    } finally {
+      setPatConnecting(false);
+    }
+  };
+
   const checkFigmaAuth = async () => {
     try {
       const res = await fetch("/api/figma/token");
       if (res.ok) {
         const data = await res.json();
-        setFigmaConnected(data.authenticated && !data.expired);
+        if (data.authenticated && !data.expired) {
+          setFigmaConnected(true);
+          return;
+        }
+      }
+      // Check saved PAT fallback
+      const savedPat = localStorage.getItem("ep_figma_pat");
+      if (savedPat) {
+        setFigmaPat(savedPat);
+        await connectFigmaPat(savedPat);
+      } else {
+        setFigmaConnected(false);
       }
     } catch {
       setFigmaConnected(false);
@@ -107,14 +147,17 @@ export default function DashboardPage() {
     }
   };
 
-  const connectFigma = () => {
+  const connectFigma = (scopeOverride?: string) => {
     const params = new URLSearchParams();
     params.set("redirect_to", "/dashboard");
+    if (scopeOverride) params.set("scope", scopeOverride);
     window.location.href = `/api/figma/authorize?${params.toString()}`;
   };
 
   const disconnectFigma = async () => {
     await fetch("/api/figma/revoke", { method: "POST" });
+    localStorage.removeItem("ep_figma_pat");
+    setFigmaPat("");
     setFigmaConnected(false);
   };
 
@@ -573,20 +616,95 @@ export default function DashboardPage() {
                     />
                   ) : (
                     <div className="space-y-3.5">
-                      {/* Minimal Connect Banner */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl border border-primary/20 bg-primary/5">
-                        <div className="space-y-0.5 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-foreground">Connect Figma Account</p>
-                          <p className="text-[11px] text-muted-foreground">Browse your teams, files, and recent designs directly</p>
+                      {/* Dual Connect Options (OAuth or Token on Any Device) */}
+                      <div className="p-3 sm:p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="space-y-0.5 min-w-0">
+                            <p className="text-xs sm:text-sm font-medium text-foreground">Connect Figma Account</p>
+                            <p className="text-[11px] text-muted-foreground">Access your files on any device via OAuth or Token</p>
+                          </div>
+                          <div className="flex items-center p-0.5 bg-background/60 rounded-md border text-[11px] shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setConnectMethod("oauth")}
+                              className={`px-2 py-0.5 rounded transition-all ${
+                                connectMethod === "oauth" ? "bg-primary text-primary-foreground font-medium shadow-xs" : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              OAuth
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConnectMethod("pat")}
+                              className={`px-2 py-0.5 rounded transition-all ${
+                                connectMethod === "pat" ? "bg-primary text-primary-foreground font-medium shadow-xs" : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              Token
+                            </button>
+                          </div>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={connectFigma}
-                          className="w-full sm:w-auto h-8 px-3 text-xs font-medium shrink-0 shadow-xs"
-                        >
-                          <PenTool className="h-3.5 w-3.5 mr-1.5" />
-                          Connect Figma
-                        </Button>
+
+                        {connectMethod === "oauth" ? (
+                          <div className="space-y-2 pt-1 border-t border-border/40">
+                            <Button
+                              size="sm"
+                              onClick={() => connectFigma()}
+                              className="w-full h-8 text-xs font-medium shadow-xs"
+                            >
+                              <PenTool className="h-3.5 w-3.5 mr-1.5" />
+                              Authorize with Figma (1-Click)
+                            </Button>
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground px-0.5">
+                              <span>Scope: file_content:read, current_user:read</span>
+                              <button
+                                type="button"
+                                onClick={() => connectFigma("files:read")}
+                                className="underline hover:text-foreground"
+                                title="Try legacy scope if your Figma app uses files:read"
+                              >
+                                Use files:read fallback
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 pt-1 border-t border-border/40">
+                            <div className="flex gap-2">
+                              <Input
+                                type="password"
+                                placeholder="figd_... (Personal Access Token)"
+                                value={figmaPat}
+                                onChange={(e) => {
+                                  setFigmaPat(e.target.value);
+                                  setPatError(null);
+                                }}
+                                className="h-8 text-xs font-mono"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && figmaPat.trim()) connectFigmaPat();
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => connectFigmaPat()}
+                                disabled={!figmaPat.trim() || patConnecting}
+                                className="h-8 px-3 text-xs font-medium shrink-0"
+                              >
+                                {patConnecting ? (
+                                  <>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                    Connecting...
+                                  </>
+                                ) : (
+                                  "Connect"
+                                )}
+                              </Button>
+                            </div>
+                            {patError && <p className="text-[11px] text-destructive">{patError}</p>}
+                            <p className="text-[10px] text-muted-foreground">
+                              Works on all devices without redirect URLs. Get token in Figma &gt; Settings &gt; Account.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Minimal Divider */}

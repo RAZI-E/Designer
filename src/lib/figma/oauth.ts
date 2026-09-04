@@ -56,6 +56,34 @@ export function parseTokenCookie(cookieHeader: string | null): FigmaOAuthTokens 
   }
 }
 
+const PAT_COOKIE = "figma_pat";
+
+export function serializePatCookie(pat: string, secure: boolean = false): string {
+  const parts = [
+    `${PAT_COOKIE}=${encodeURIComponent(pat.trim())}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${TOKEN_MAX_AGE}`,
+  ];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
+export function parsePatCookie(cookieHeader: string | null): string | null {
+  if (!cookieHeader) return null;
+  const cookies = cookieHeader.split(";").map((c) => c.trim());
+  const raw = cookies.find((c) => c.startsWith(`${PAT_COOKIE}=`));
+  if (!raw) return null;
+  return decodeURIComponent(raw.split("=").slice(1).join("=")).trim() || null;
+}
+
+export function deletePatCookie(secure: boolean = false): string {
+  const parts = [`${PAT_COOKIE}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
 export function deleteTokenCookie(secure: boolean = false): string {
   const parts = [`${TOKEN_COOKIE}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
   if (secure) parts.push("Secure");
@@ -171,6 +199,11 @@ export async function refreshFigmaToken(refreshToken: string): Promise<FigmaOAut
 }
 
 export async function getValidFigmaToken(cookieHeader: string | null): Promise<string> {
+  const pat = parsePatCookie(cookieHeader);
+  if (pat) {
+    return pat;
+  }
+
   let tokens = parseTokenCookie(cookieHeader);
   if (!tokens) {
     throw new Error("Not authenticated with Figma");
