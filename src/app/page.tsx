@@ -60,7 +60,7 @@ export default function HomePage() {
             <span className="text-primary">IDE-Ready Prompts</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Transform Git repositories, Figma files, and PSDs into structured,
+            Transform Git repositories, Figma files, and design screenshots into structured,
             token-efficient prompts with exact component placements, spatial
             distances, and design tokens.
           </p>
@@ -122,17 +122,17 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <FileImage className="h-10 w-10 text-primary mb-2" />
-                <CardTitle>PSD / Image</CardTitle>
+                <CardTitle>Design Images</CardTitle>
                 <CardDescription>
-                  Upload PSD files or design screenshots for AI-powered spatial
+                  Upload UI screenshots or design mockups for AI-powered spatial
                   analysis and component detection.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>Layer hierarchy & text extraction</li>
+                  <li>High-resolution screenshot analysis</li>
                   <li>Gemini 3.5 Flash vision analysis</li>
-                  <li>Spatial coordinate mapping</li>
+                  <li>Spatial coordinate & typography mapping</li>
                 </ul>
               </CardContent>
             </Card>
@@ -150,7 +150,7 @@ export default function HomePage() {
               </div>
               <h3 className="font-semibold mb-2">1. Ingest</h3>
               <p className="text-sm text-muted-foreground">
-                Upload your design source (Git, Figma, or PSD)
+                Upload your design source (Git, Figma, or Image)
               </p>
             </div>
             <div className="text-center">

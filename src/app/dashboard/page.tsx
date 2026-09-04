@@ -30,7 +30,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { FigmaProjectSelector } from "@/components/figma/figma-project-selector";
 import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spatial";
 
-type InputSource = "git" | "figma" | "psd" | null;
+type InputSource = "git" | "figma" | "image" | null;
 type ProcessingStep = "idle" | "extracting" | "generating" | "complete";
 
 export default function DashboardPage() {
@@ -39,7 +39,6 @@ export default function DashboardPage() {
   const [gitToken, setGitToken] = useState("");
   const [figmaUrl, setFigmaUrl] = useState("");
   const [figmaPat, setFigmaPat] = useState("");
-  const [psdFile, setPsdFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
 
@@ -53,7 +52,6 @@ export default function DashboardPage() {
   const [figmaConnected, setFigmaConnected] = useState(false);
   const [figmaChecking, setFigmaChecking] = useState(true);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -127,7 +125,6 @@ export default function DashboardPage() {
     setGitToken("");
     setFigmaUrl("");
     setFigmaPat("");
-    setPsdFile(null);
     setImageFile(null);
     setImageUrl("");
     setStep("idle");
@@ -313,67 +310,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handlePsdAnalyze = async () => {
-    if (!psdFile) return;
-    setStep("extracting");
-    setProgress(4);
-    setError(null);
-    startProgressAnimation(48, 160);
 
-    try {
-      const formData = new FormData();
-      formData.append("file", psdFile);
-
-      const response = await fetch("/api/analyze-psd", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to parse PSD file");
-      }
-
-      const data = await response.json();
-
-      const doc: SpecDocument = {
-        source: "psd",
-        projectName: psdFile.name.replace(/\.psd$/i, ""),
-        extraction: {
-          elements: data.elements || data.components || [],
-          globalTokens: data.globalTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] },
-        },
-        metadata: {
-          extractedAt: new Date().toISOString(),
-          sourceWidth: data.metadata?.width || 1920,
-          sourceHeight: data.metadata?.height || 1080,
-          totalElements: data.metadata?.totalComponents || (data.elements?.length ?? 0),
-        },
-      };
-
-      setSpecDocument(doc);
-      setStep("generating");
-      startProgressAnimation(88, 180);
-
-      const promptResponse = await fetch("/api/generate-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ specDocument: doc }),
-      });
-
-      if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
-      const promptData = await promptResponse.json();
-      setGeneratedPrompt(promptData);
-      stopProgressAnimation();
-      setProgress(100);
-      setTimeout(() => setStep("complete"), 250);
-    } catch (err) {
-      stopProgressAnimation();
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setStep("idle");
-      setProgress(0);
-    }
-  };
 
   const handleVisionAnalyze = async () => {
     if (!imageFile) return;
@@ -434,13 +371,6 @@ export default function DashboardPage() {
       setError(err instanceof Error ? err.message : "An error occurred");
       setStep("idle");
       setProgress(0);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.name.endsWith(".psd")) {
-      setPsdFile(file);
     }
   };
 
@@ -543,13 +473,13 @@ export default function DashboardPage() {
                     Figma
                   </Button>
                   <Button
-                    variant={source === "psd" ? "default" : "outline"}
+                    variant={source === "image" ? "default" : "outline"}
                     className="h-20 flex-col gap-2"
-                    onClick={() => setSource("psd")}
+                    onClick={() => setSource("image")}
                     disabled={isProcessing}
                   >
                     <FileImage className="h-5 w-5" />
-                    PSD / Image
+                    Design Image
                   </Button>
                 </div>
               </CardContent>
@@ -696,61 +626,46 @@ export default function DashboardPage() {
               </Card>
             )}
 
-            {source === "psd" && (
+            {source === "image" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>PSD / Image Upload</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileImage className="h-5 w-5 text-primary" />
+                    Design Image Upload
+                  </CardTitle>
+                  <CardDescription>
+                    Upload a design mockup or screenshot to extract layout coordinates, component signatures, and design tokens using Gemini 3.5 Flash.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Tabs defaultValue="image">
+                  <Tabs defaultValue="upload">
                     <TabsList className="w-full">
-                      <TabsTrigger value="image" className="flex-1">
-                        Image File
-                      </TabsTrigger>
-                      <TabsTrigger value="psd" className="flex-1">
-                        PSD File
+                      <TabsTrigger value="upload" className="flex-1">
+                        Upload Image
                       </TabsTrigger>
                       <TabsTrigger value="url" className="flex-1">
                         Image URL
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="image" className="space-y-4">
+                    <TabsContent value="upload" className="space-y-4">
                       <div
-                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors bg-muted/10"
                         onClick={() => imageInputRef.current?.click()}
                       >
                         <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          {imageFile ? imageFile.name : "Click to upload image from your device"}
+                        <p className="text-sm font-medium text-foreground">
+                          {imageFile ? imageFile.name : "Click to upload design image"}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          PNG, JPG, WebP, GIF
+                          PNG, JPG, WebP, GIF, SVG
                         </p>
                       </div>
                       <input
                         ref={imageInputRef}
                         type="file"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
                         className="hidden"
                         onChange={handleImageUpload}
-                      />
-                    </TabsContent>
-                    <TabsContent value="psd" className="space-y-4">
-                      <div
-                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          {psdFile ? psdFile.name : "Click to upload PSD file"}
-                        </p>
-                      </div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".psd"
-                        className="hidden"
-                        onChange={handleFileUpload}
                       />
                     </TabsContent>
                     <TabsContent value="url" className="space-y-4">
@@ -768,26 +683,43 @@ export default function DashboardPage() {
                       </div>
                     </TabsContent>
                   </Tabs>
+
+                  {imageFile && (
+                    <div className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/20 text-xs">
+                      <div className="flex items-center gap-2 truncate">
+                        <FileImage className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate font-medium">{imageFile.name}</span>
+                        <span className="text-muted-foreground">({(imageFile.size / 1024).toFixed(1)} KB)</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          setImageFile(null);
+                          setImageUrl("");
+                          if (imageInputRef.current) imageInputRef.current.value = "";
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+
                   <Button
                     className="w-full"
-                    onClick={() => {
-                      if (psdFile) {
-                        handlePsdAnalyze();
-                      } else if (imageFile) {
-                        handleVisionAnalyze();
-                      }
-                    }}
-                    disabled={(!psdFile && !imageFile) || isProcessing}
+                    onClick={handleVisionAnalyze}
+                    disabled={!imageFile || isProcessing}
                   >
                     {isProcessing ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Analyzing...
+                        Analyzing Design...
                       </>
                     ) : (
                       <>
                         <Eye className="h-4 w-4 mr-2" />
-                        Analyze Design
+                        Analyze Design with Gemini 3.5 Flash
                       </>
                     )}
                   </Button>
@@ -806,8 +738,6 @@ export default function DashboardPage() {
                             ? "Analyzing repository components & structures..."
                             : source === "figma"
                             ? "Parsing Figma design & extracting spatial tokens..."
-                            : source === "psd"
-                            ? "Reading Photoshop layers, vector paths & typography..."
                             : "Analyzing layout & design tokens with Gemini 3.5 Flash..."
                         )}
                         {step === "generating" && "Compiling pixel-accurate IDE prompt & blueprint..."}

@@ -106,7 +106,7 @@ export interface DesignTokens {
 }
 
 export interface SpecDocument {
-  source: "figma" | "psd" | "git" | "vision";
+  source: "figma" | "git" | "vision";
   sourceUrl?: string;
   projectName: string;
   designTokens: DesignTokens;

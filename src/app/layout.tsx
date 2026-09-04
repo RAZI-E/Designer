@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Designer by Lavaithan - Design to IDE Prompt Converter",
   description:
-    "Convert Git repositories, Figma files, and PSDs into structured, token-efficient IDE prompts with exact component placements and design tokens.",
+    "Convert Git repositories, Figma files, and design screenshots into structured, token-efficient IDE prompts with exact component placements and design tokens.",
   icons: {
     icon: "/logo.png",
   },

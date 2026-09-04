@@ -130,7 +130,7 @@ export interface DesignExtractionResult {
 }
 
 export interface SpecDocument {
-  source: "figma" | "psd" | "git" | "vision";
+  source: "figma" | "git" | "vision";
   sourceUrl?: string;
   projectName: string;
   extraction: DesignExtractionResult;
