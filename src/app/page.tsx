@@ -55,7 +55,7 @@ export default function HomePage() {
             AI Design to Prompt • Open Source & Free
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            Convert Design into Prompts AI
+            Convert Design into Prompts
             <br />
             <span className="text-primary">Pixel-Accurate IDE Specifications</span>
           </h1>
