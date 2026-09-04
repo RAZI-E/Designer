@@ -55,6 +55,32 @@ export default function DashboardPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startProgressAnimation = useCallback((targetCap: number, speedMs: number = 220) => {
+    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    progressTimerRef.current = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= targetCap) return prev;
+        const remaining = targetCap - prev;
+        const inc = Math.max(1, Math.min(5, Math.ceil(remaining * 0.15)));
+        return Math.min(targetCap, prev + inc);
+      });
+    }, speedMs);
+  }, []);
+
+  const stopProgressAnimation = useCallback(() => {
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     checkFigmaAuth();
@@ -95,6 +121,7 @@ export default function DashboardPage() {
   };
 
   const resetState = useCallback(() => {
+    stopProgressAnimation();
     setSource(null);
     setGitUrl("");
     setGitToken("");
@@ -108,13 +135,14 @@ export default function DashboardPage() {
     setSpecDocument(null);
     setGeneratedPrompt(null);
     setError(null);
-  }, []);
+  }, [stopProgressAnimation]);
 
   const handleGitAnalyze = async () => {
     if (!gitUrl) return;
     setStep("extracting");
-    setProgress(20);
+    setProgress(4);
     setError(null);
+    startProgressAnimation(48, 200);
 
     try {
       const response = await fetch("/api/git", {
@@ -129,7 +157,6 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
-      setProgress(50);
 
       const doc: SpecDocument = {
         source: "git",
@@ -170,7 +197,8 @@ export default function DashboardPage() {
       };
 
       setSpecDocument(doc);
-      setProgress(70);
+      setStep("generating");
+      startProgressAnimation(88, 180);
 
       const promptResponse = await fetch("/api/generate-prompt", {
         method: "POST",
@@ -181,9 +209,11 @@ export default function DashboardPage() {
       if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
+      stopProgressAnimation();
       setProgress(100);
-      setStep("complete");
+      setTimeout(() => setStep("complete"), 250);
     } catch (err) {
+      stopProgressAnimation();
       setError(err instanceof Error ? err.message : "An error occurred");
       setStep("idle");
       setProgress(0);
@@ -195,8 +225,9 @@ export default function DashboardPage() {
     if (!targetUrl) return;
     setFigmaUrl(targetUrl);
     setStep("extracting");
-    setProgress(20);
+    setProgress(4);
     setError(null);
+    startProgressAnimation(48, 220);
 
     try {
       const response = await fetch("/api/figma", {
@@ -215,7 +246,6 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
-      setProgress(50);
 
       const extractedElements = data.elements || data.components || [];
       const extractedTokens = data.globalTokens || data.designTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] };
@@ -260,7 +290,8 @@ export default function DashboardPage() {
       }
 
       setSpecDocument(doc);
-      setProgress(70);
+      setStep("generating");
+      startProgressAnimation(88, 180);
 
       const promptResponse = await fetch("/api/generate-prompt", {
         method: "POST",
@@ -271,9 +302,11 @@ export default function DashboardPage() {
       if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
+      stopProgressAnimation();
       setProgress(100);
-      setStep("complete");
+      setTimeout(() => setStep("complete"), 250);
     } catch (err) {
+      stopProgressAnimation();
       setError(err instanceof Error ? err.message : "An error occurred");
       setStep("idle");
       setProgress(0);
@@ -283,8 +316,9 @@ export default function DashboardPage() {
   const handlePsdAnalyze = async () => {
     if (!psdFile) return;
     setStep("extracting");
-    setProgress(20);
+    setProgress(4);
     setError(null);
+    startProgressAnimation(48, 160);
 
     try {
       const formData = new FormData();
@@ -301,25 +335,25 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
-      setProgress(50);
 
       const doc: SpecDocument = {
         source: "psd",
-        projectName: psdFile.name.replace(".psd", ""),
+        projectName: psdFile.name.replace(/\.psd$/i, ""),
         extraction: {
-          elements: data.components || [],
-          globalTokens: { colors: {}, fonts: {}, shadows: [], gradients: [] },
+          elements: data.elements || data.components || [],
+          globalTokens: data.globalTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] },
         },
         metadata: {
           extractedAt: new Date().toISOString(),
-          sourceWidth: data.metadata.width,
-          sourceHeight: data.metadata.height,
-          totalElements: data.metadata.totalComponents,
+          sourceWidth: data.metadata?.width || 1920,
+          sourceHeight: data.metadata?.height || 1080,
+          totalElements: data.metadata?.totalComponents || (data.elements?.length ?? 0),
         },
       };
 
       setSpecDocument(doc);
-      setProgress(70);
+      setStep("generating");
+      startProgressAnimation(88, 180);
 
       const promptResponse = await fetch("/api/generate-prompt", {
         method: "POST",
@@ -330,9 +364,11 @@ export default function DashboardPage() {
       if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
+      stopProgressAnimation();
       setProgress(100);
-      setStep("complete");
+      setTimeout(() => setStep("complete"), 250);
     } catch (err) {
+      stopProgressAnimation();
       setError(err instanceof Error ? err.message : "An error occurred");
       setStep("idle");
       setProgress(0);
@@ -342,8 +378,9 @@ export default function DashboardPage() {
   const handleVisionAnalyze = async () => {
     if (!imageFile) return;
     setStep("extracting");
-    setProgress(20);
+    setProgress(4);
     setError(null);
+    startProgressAnimation(48, 220);
 
     try {
       const formData = new FormData();
@@ -360,11 +397,10 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
-      setProgress(50);
 
       const doc: SpecDocument = {
         source: "vision",
-        projectName: "design-analysis",
+        projectName: imageFile.name.replace(/\.[^/.]+$/, "") || "design-analysis",
         extraction: {
           elements: data.elements || [],
           globalTokens: data.globalTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] },
@@ -373,12 +409,13 @@ export default function DashboardPage() {
           extractedAt: new Date().toISOString(),
           sourceWidth: data.metadata?.sourceWidth || 1920,
           sourceHeight: data.metadata?.sourceHeight || 1080,
-          totalElements: data.metadata?.elementCount || 0,
+          totalElements: data.metadata?.elementCount || (data.elements?.length ?? 0),
         },
       };
 
       setSpecDocument(doc);
-      setProgress(70);
+      setStep("generating");
+      startProgressAnimation(88, 180);
 
       const promptResponse = await fetch("/api/generate-prompt", {
         method: "POST",
@@ -389,9 +426,11 @@ export default function DashboardPage() {
       if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
+      stopProgressAnimation();
       setProgress(100);
-      setStep("complete");
+      setTimeout(() => setStep("complete"), 250);
     } catch (err) {
+      stopProgressAnimation();
       setError(err instanceof Error ? err.message : "An error occurred");
       setStep("idle");
       setProgress(0);
@@ -759,15 +798,23 @@ export default function DashboardPage() {
             {isProcessing && (
               <Card>
                 <CardContent className="pt-6">
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <div className="flex items-center justify-between text-sm">
-                      <span>
-                        {step === "extracting" && "Extracting spatial data with Gemini 2.5 Flash..."}
-                        {step === "generating" && "Compiling pixel-accurate blueprint..."}
+                      <span className="font-medium text-foreground/90">
+                        {step === "extracting" && (
+                          source === "git"
+                            ? "Analyzing repository components & structures..."
+                            : source === "figma"
+                            ? "Parsing Figma design & extracting spatial tokens..."
+                            : source === "psd"
+                            ? "Reading Photoshop layers, vector paths & typography..."
+                            : "Analyzing layout & design tokens with Gemini 3.5 Flash..."
+                        )}
+                        {step === "generating" && "Compiling pixel-accurate IDE prompt & blueprint..."}
                       </span>
-                      <span>{progress}%</span>
+                      <span className="tabular-nums font-semibold text-primary">{progress}%</span>
                     </div>
-                    <Progress value={progress} />
+                    <Progress value={progress} className="transition-all duration-200" />
                   </div>
                 </CardContent>
               </Card>

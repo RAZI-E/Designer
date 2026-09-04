@@ -130,9 +130,9 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>Layer tree parsing</li>
-                  <li>Gemini 2.5 Flash vision analysis</li>
-                  <li>Component categorization</li>
+                  <li>Layer hierarchy & text extraction</li>
+                  <li>Gemini 3.5 Flash vision analysis</li>
+                  <li>Spatial coordinate mapping</li>
                 </ul>
               </CardContent>
             </Card>
@@ -205,7 +205,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>
             Designer by Lavaithan is open source under the MIT License. Built with Next.js,
-            Tailwind CSS, and Gemini 2.5 Flash.
+            Tailwind CSS, and Gemini 3.5 Flash.
           </p>
         </div>
       </footer>

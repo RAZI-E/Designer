@@ -17,13 +17,15 @@ export async function POST(request: NextRequest) {
     const result = await parsePSD(buffer);
 
     return NextResponse.json({
-      components: result.components,
+      elements: result.elements,
+      components: result.elements,
+      globalTokens: result.globalTokens,
       metadata: {
         fileName: file.name,
         fileSize: file.size,
         width: result.width,
         height: result.height,
-        totalComponents: result.components.length,
+        totalComponents: result.totalElements,
         extractedAt: new Date().toISOString(),
       },
     });
