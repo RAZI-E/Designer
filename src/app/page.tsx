@@ -55,9 +55,9 @@ export default function HomePage() {
             AI Design to Prompt • Open Source & Free
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            Convert Design into Prompts
+            Convert Design in
             <br />
-            <span className="text-primary">Pixel-Accurate IDE Specifications</span>
+            <span className="text-primary">Pixel-Accurate Prompts for IDEs</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             <strong>Designer by Lavaithan</strong> transforms Figma designs, UI mockups, and screenshots
