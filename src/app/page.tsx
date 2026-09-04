@@ -52,22 +52,22 @@ export default function HomePage() {
       <main className="flex-1">
         <section className="container mx-auto px-4 py-20 text-center">
           <Badge variant="secondary" className="mb-4">
-            Open Source & Free
+            AI Design to Prompt • Open Source & Free
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            Convert Designs into
+            Convert Design into Prompts AI
             <br />
-            <span className="text-primary">IDE-Ready Prompts</span>
+            <span className="text-primary">Pixel-Accurate IDE Specifications</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Transform Git repositories, Figma files, and design screenshots into structured,
-            token-efficient prompts with exact component placements, spatial
-            distances, and design tokens.
+            <strong>Designer by Lavaithan</strong> transforms Figma designs, UI mockups, and screenshots
+            into structured, token-efficient IDE prompts with exact component placements, spatial borders,
+            and Tailwind design tokens.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link href="/dashboard">
               <Button size="lg" className="gap-2">
-                Get Started <ArrowRight className="h-4 w-4" />
+                Convert Design to Prompt <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="https://github.com/RAZI-E/Designer" target="_blank" rel="noopener noreferrer">
@@ -104,17 +104,17 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <PenTool className="h-10 w-10 text-primary mb-2" />
-                <CardTitle>Figma Design</CardTitle>
+                <CardTitle>Convert Figma Design into Prompts</CardTitle>
                 <CardDescription>
-                  Import Figma files to extract precise layout trees, AutoLayout
-                  parameters, and design tokens.
+                  Connect your Figma workspace to extract root canvas borders, AutoLayout flex parameters,
+                  nested component trees, and typography into structured IDE prompts.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>AutoLayout gap & padding extraction</li>
-                  <li>Color palette & typography mapping</li>
-                  <li>Bounding box calculations</li>
+                  <li>Root artboard border & padding detection</li>
+                  <li>AutoLayout gap, flex direction & padding extraction</li>
+                  <li>Interactive button, navbar, & text content mapping</li>
                 </ul>
               </CardContent>
             </Card>
@@ -122,17 +122,17 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <FileImage className="h-10 w-10 text-primary mb-2" />
-                <CardTitle>Design Images</CardTitle>
+                <CardTitle>AI Design to Prompt (Vision)</CardTitle>
                 <CardDescription>
-                  Upload UI screenshots or design mockups for AI-powered spatial
-                  analysis and component detection.
+                  Upload UI screenshots or design mockups for multimodal AI spatial analysis
+                  and mathematical component detection powered by Gemini 3.5 Flash.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>High-resolution screenshot analysis</li>
-                  <li>Gemini 3.5 Flash vision analysis</li>
-                  <li>Spatial coordinate & typography mapping</li>
+                  <li>Gemini 3.5 Flash vision spatial extraction</li>
+                  <li>Pixel-accurate coordinates & Tailwind mapping</li>
                 </ul>
               </CardContent>
             </Card>
@@ -179,6 +179,55 @@ export default function HomePage() {
               <p className="text-sm text-muted-foreground">
                 Copy prompt, export markdown, or download .cursorrules
               </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t py-16 bg-muted/20">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <h2 className="text-3xl font-bold text-center mb-4">
+              Frequently Asked Questions (AI & Design to Prompt)
+            </h2>
+            <p className="text-sm text-muted-foreground text-center mb-12 max-w-xl mx-auto">
+              Everything you need to know about converting designs into prompts for Cursor, Claude, and Copilot.
+            </p>
+
+            <div className="space-y-6">
+              <div className="p-5 rounded-xl border bg-card">
+                <h3 className="font-semibold text-base mb-2">
+                  What is Designer by Lavaithan?
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  <strong>Designer by Lavaithan</strong> is an open-source AI developer tool that converts Figma files, UI screenshots, and Git repositories into mathematically accurate, token-efficient IDE prompts. It extracts root container boundaries, AutoLayout parameters, exact coordinates, paddings, and typography to eliminate hallucinated CSS in AI coding models like Cursor, Claude Code, and GitHub Copilot.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl border bg-card">
+                <h3 className="font-semibold text-base mb-2">
+                  How does it convert Figma designs into prompts?
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Designer connects to Figma via OAuth or public design links, unwraps the root canvas artboard, and recursively maps all nested components (navbars, buttons, form inputs, typography, and text content). It then compiles this into a structured 5-part blueprint and downloadable <code>.cursorrules</code> file.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl border bg-card">
+                <h3 className="font-semibold text-base mb-2">
+                  Can I convert screenshots or design images into code prompts?
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Yes. Using Google Gemini 3.5 Flash multimodal vision, Designer inspects high-resolution screenshots to detect spatial boundaries, color palettes, typography, and flex alignments, outputting pixel-accurate Tailwind CSS classes.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl border bg-card">
+                <h3 className="font-semibold text-base mb-2">
+                  Is Designer by Lavaithan free and open source?
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Yes, Designer by Lavaithan is completely free and open-source under the MIT license with no sign-up or credit card required.
+                </p>
+              </div>
             </div>
           </div>
         </section>
