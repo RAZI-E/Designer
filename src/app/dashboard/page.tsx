@@ -403,38 +403,40 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="h-8 w-8" title="Back to Home">
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" title="Back to Home">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+            <Link href="/" className="flex items-center gap-2 sm:gap-2.5 hover:opacity-90 transition-opacity min-w-0">
               <Image
                 src="/logo.png"
                 alt="Designer Logo"
                 width={28}
                 height={28}
-                className="h-7 w-7 rounded-lg object-contain shadow-sm"
+                className="h-7 w-7 rounded-lg object-contain shadow-sm shrink-0"
                 priority
               />
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-bold tracking-tight">Designer</span>
+              <div className="flex items-baseline gap-1.5 min-w-0">
+                <span className="text-base sm:text-lg font-bold tracking-tight">Designer</span>
                 <span className="text-xs text-muted-foreground hidden sm:inline">by Lavaithan</span>
               </div>
             </Link>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {figmaConnected && (
-              <Button variant="ghost" size="sm" onClick={disconnectFigma}>
-                <Unlink className="h-4 w-4 mr-1" />
-                Disconnect Figma
+              <Button variant="ghost" size="sm" onClick={disconnectFigma} className="h-8 px-2 sm:px-3 text-xs">
+                <Unlink className="h-3.5 w-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Disconnect Figma</span>
               </Button>
             )}
             {step === "complete" && (
-              <Button variant="outline" size="sm" onClick={resetState}>
-                New Analysis
+              <Button variant="outline" size="sm" onClick={resetState} className="h-8 px-2.5 sm:px-3 text-xs">
+                <Sparkles className="h-3.5 w-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">New Analysis</span>
+                <span className="sm:hidden">New</span>
               </Button>
             )}
             <ThemeToggle />
@@ -442,44 +444,44 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 py-5 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Select Input Source</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base sm:text-lg">Select Input Source</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Choose a design source to analyze and convert into IDE prompts.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <Button
                     variant={source === "git" ? "default" : "outline"}
-                    className="h-20 flex-col gap-2"
+                    className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 p-1 sm:p-2 text-xs sm:text-sm"
                     onClick={() => setSource("git")}
                     disabled={isProcessing}
                   >
-                    <GitBranch className="h-5 w-5" />
-                    Git Repo
+                    <GitBranch className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                    <span className="truncate">Git Repo</span>
                   </Button>
                   <Button
                     variant={source === "figma" ? "default" : "outline"}
-                    className="h-20 flex-col gap-2"
+                    className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 p-1 sm:p-2 text-xs sm:text-sm"
                     onClick={() => setSource("figma")}
                     disabled={isProcessing}
                   >
-                    <PenTool className="h-5 w-5" />
-                    Figma
+                    <PenTool className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                    <span className="truncate">Figma</span>
                   </Button>
                   <Button
                     variant={source === "image" ? "default" : "outline"}
-                    className="h-20 flex-col gap-2"
+                    className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 p-1 sm:p-2 text-xs sm:text-sm"
                     onClick={() => setSource("image")}
                     disabled={isProcessing}
                   >
-                    <FileImage className="h-5 w-5" />
-                    Design Image
+                    <FileImage className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                    <span className="truncate">Design Image</span>
                   </Button>
                 </div>
               </CardContent>
@@ -764,100 +766,106 @@ export default function DashboardPage() {
               <>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Generated Blueprint
-                      <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-base sm:text-lg">Generated Blueprint</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">
+                          {generatedPrompt.chunks.length} chunks &bull; ~
+                          {generatedPrompt.chunks.reduce((s, c) => s + c.tokenEstimate, 0)} tokens
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="flex-1 sm:flex-initial h-8 text-xs"
                           onClick={() => copyToClipboard(generatedPrompt.fullBlueprint)}
                         >
                           {copied ? (
-                            <Check className="h-4 w-4 mr-1" />
+                            <Check className="h-3.5 w-3.5 mr-1 text-emerald-500" />
                           ) : (
-                            <Copy className="h-4 w-4 mr-1" />
+                            <Copy className="h-3.5 w-3.5 mr-1" />
                           )}
-                          Copy
+                          {copied ? "Copied" : "Copy"}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
+                          className="flex-1 sm:flex-initial h-8 text-xs"
                           onClick={() =>
                             downloadFile(generatedPrompt.fullBlueprint, "designer-blueprint.md")
                           }
                         >
-                          <Download className="h-4 w-4 mr-1" />
+                          <Download className="h-3.5 w-3.5 mr-1" />
                           Export
                         </Button>
                       </div>
-                    </CardTitle>
-                    <CardDescription>
-                      {generatedPrompt.chunks.length} chunks &bull; ~
-                      {generatedPrompt.chunks.reduce((s, c) => s + c.tokenEstimate, 0)} tokens
-                    </CardDescription>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <Tabs defaultValue="viewport">
-                      <TabsList>
-                        <TabsTrigger value="viewport" className="gap-1">
-                          <Code2 className="h-3 w-3" />
-                          Viewport
-                        </TabsTrigger>
-                        <TabsTrigger value="spatial" className="gap-1">
-                          <Eye className="h-3 w-3" />
-                          Spatial
-                        </TabsTrigger>
-                        <TabsTrigger value="effects" className="gap-1">
-                          <Sparkles className="h-3 w-3" />
-                          Effects
-                        </TabsTrigger>
-                        <TabsTrigger value="responsive" className="gap-1">
-                          <FileText className="h-3 w-3" />
-                          Responsive
-                        </TabsTrigger>
-                        <TabsTrigger value="code" className="gap-1">
-                          <Code2 className="h-3 w-3" />
-                          Code
-                        </TabsTrigger>
-                      </TabsList>
+                    <Tabs defaultValue="viewport" className="w-full">
+                      <div className="w-full overflow-x-auto no-scrollbar pb-1">
+                        <TabsList className="w-max sm:w-full flex justify-start sm:justify-center p-1 h-auto">
+                          <TabsTrigger value="viewport" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
+                            <Code2 className="h-3 w-3" />
+                            Viewport
+                          </TabsTrigger>
+                          <TabsTrigger value="spatial" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
+                            <Eye className="h-3 w-3" />
+                            Spatial
+                          </TabsTrigger>
+                          <TabsTrigger value="effects" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
+                            <Sparkles className="h-3 w-3" />
+                            Effects
+                          </TabsTrigger>
+                          <TabsTrigger value="responsive" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
+                            <FileText className="h-3 w-3" />
+                            Responsive
+                          </TabsTrigger>
+                          <TabsTrigger value="code" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
+                            <Code2 className="h-3 w-3" />
+                            Code
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
                       <TabsContent value="viewport">
                         <Textarea
                           readOnly
-                          className="min-h-100 font-mono text-xs"
+                          className="min-h-75 sm:min-h-100 font-mono text-xs leading-relaxed"
                           value={generatedPrompt.viewportSetup}
                         />
                       </TabsContent>
                       <TabsContent value="spatial">
                         <Textarea
                           readOnly
-                          className="min-h-100 font-mono text-xs"
+                          className="min-h-75 sm:min-h-100 font-mono text-xs leading-relaxed"
                           value={generatedPrompt.spatialMatrix}
                         />
                       </TabsContent>
                       <TabsContent value="effects">
                         <Textarea
                           readOnly
-                          className="min-h-100 font-mono text-xs"
+                          className="min-h-75 sm:min-h-100 font-mono text-xs leading-relaxed"
                           value={generatedPrompt.microEffects}
                         />
                       </TabsContent>
                       <TabsContent value="responsive">
                         <Textarea
                           readOnly
-                          className="min-h-100 font-mono text-xs"
+                          className="min-h-75 sm:min-h-100 font-mono text-xs leading-relaxed"
                           value={generatedPrompt.responsiveRules}
                         />
                       </TabsContent>
                       <TabsContent value="code">
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <Textarea
                             readOnly
-                            className="min-h-75 font-mono text-xs"
+                            className="min-h-60 sm:min-h-75 font-mono text-xs leading-relaxed"
                             value={generatedPrompt.codeGenerationSteps}
                           />
                           <Button
                             variant="outline"
-                            className="w-full"
+                            className="w-full text-xs sm:text-sm h-10"
                             onClick={() =>
                               downloadFile(generatedPrompt.fullBlueprint, "designer-blueprint.md")
                             }
@@ -873,23 +881,25 @@ export default function DashboardPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Extracted Elements</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-base sm:text-lg">Extracted Elements</CardTitle>
+                    <CardDescription className="text-xs">
                       {specDocument?.metadata.totalElements} elements detected
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 max-h-75 overflow-y-auto">
+                    <div className="space-y-2 max-h-75 overflow-y-auto pr-1">
                       {specDocument?.extraction.elements.map((el) => (
                         <div
                           key={el.id}
-                          className="flex items-center justify-between p-2 rounded border"
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg border text-xs sm:text-sm"
                         >
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{el.semanticTag}</Badge>
-                            <span className="text-sm">{el.name}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0">
+                              {el.semanticTag}
+                            </Badge>
+                            <span className="truncate font-medium">{el.name}</span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground shrink-0 font-mono">
                             {el.layout.desktop_16_9.coordinates.width}x{el.layout.desktop_16_9.coordinates.height}
                           </span>
                         </div>

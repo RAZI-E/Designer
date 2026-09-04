@@ -343,43 +343,43 @@ export function FigmaProjectSelector({
   return (
     <div className="space-y-4">
       {/* Account Profile Header */}
-      <div className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-border shadow-xs">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl bg-card border border-border shadow-xs">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           {userData?.img_url ? (
             <img
               src={userData.img_url}
               alt={userData.handle}
-              className="w-9 h-9 rounded-full ring-2 ring-border object-cover"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-border object-cover shrink-0"
             />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-semibold text-xs sm:text-sm shrink-0">
               {userData?.handle?.charAt(0).toUpperCase() || "F"}
             </div>
           )}
 
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm tracking-tight text-foreground">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-semibold text-xs sm:text-sm tracking-tight text-foreground truncate max-w-35 sm:max-w-xs">
                 {userData?.handle || "Figma Workspace"}
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Connected
               </span>
             </div>
-            <p className="text-xs text-muted-foreground truncate max-w-55 sm:max-w-xs">
+            <p className="text-[11px] sm:text-xs text-muted-foreground truncate max-w-50 sm:max-w-xs">
               {userData?.email || "Select a project to generate blueprint prompts"}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 self-end sm:self-center shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={fetchFigmaData}
             disabled={isLoading || isSyncing}
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            className="h-7 sm:h-8 w-7 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
             title="Refresh projects"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
@@ -389,16 +389,16 @@ export function FigmaProjectSelector({
             variant="ghost"
             size="sm"
             onClick={onDisconnect}
-            className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            className="h-7 sm:h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
           >
             <LogOut className="h-3.5 w-3.5 mr-1" />
-            Disconnect
+            <span>Disconnect</span>
           </Button>
         </div>
       </div>
 
       {/* Sync Projects / Add Team Bar */}
-      <div className="p-3.5 rounded-xl border border-border/80 bg-muted/20 space-y-2.5">
+      <div className="p-3 sm:p-3.5 rounded-xl border border-border/80 bg-muted/20 space-y-2.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
             <FolderSync className="h-3.5 w-3.5 text-primary" />
@@ -428,12 +428,12 @@ export function FigmaProjectSelector({
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Input
             placeholder="figma.com/design/... or team link"
             value={syncInput}
             onChange={(e) => setSyncInput(e.target.value)}
-            className="h-9 text-xs font-mono"
+            className="h-9 text-xs font-mono w-full"
             disabled={isSyncing || isProcessing}
             onKeyDown={(e) => {
               if (e.key === "Enter" && syncInput.trim()) handleSyncUrl();
@@ -443,7 +443,7 @@ export function FigmaProjectSelector({
             size="sm"
             onClick={handleSyncUrl}
             disabled={!syncInput.trim() || isSyncing || isProcessing}
-            className="h-9 px-3.5 shrink-0 text-xs font-medium"
+            className="h-9 px-3.5 shrink-0 text-xs font-medium w-full sm:w-auto"
           >
             {isSyncing ? (
               <>
@@ -465,12 +465,12 @@ export function FigmaProjectSelector({
       </div>
 
       {/* Navigation & Search Filter */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-lg border border-border/50 text-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-lg border border-border/50 text-xs overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setSelectedTab("all")}
-            className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition-all whitespace-nowrap text-xs ${
               selectedTab === "all"
                 ? "bg-background text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -481,7 +481,7 @@ export function FigmaProjectSelector({
           <button
             type="button"
             onClick={() => setSelectedTab("recents")}
-            className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition-all whitespace-nowrap text-xs ${
               selectedTab === "recents"
                 ? "bg-background text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -497,7 +497,7 @@ export function FigmaProjectSelector({
             placeholder="Search projects by name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 text-xs bg-background/80"
+            className="pl-8 h-8 text-xs bg-background/80 w-full"
           />
         </div>
       </div>
@@ -505,12 +505,12 @@ export function FigmaProjectSelector({
       {/* Projects List */}
       <div className="space-y-2">
         {isLoading && combinedProjects.length === 0 ? (
-          <div className="p-8 rounded-xl border border-dashed border-border/70 text-center bg-muted/10 space-y-2">
+          <div className="p-6 sm:p-8 rounded-xl border border-dashed border-border/70 text-center bg-muted/10 space-y-2">
             <RefreshCw className="h-5 w-5 animate-spin mx-auto text-primary" />
             <p className="text-xs text-muted-foreground">Loading Figma projects...</p>
           </div>
         ) : filteredProjects.length === 0 ? (
-          <div className="p-8 rounded-xl border border-dashed border-border/70 text-center bg-muted/10 space-y-3">
+          <div className="p-6 sm:p-8 rounded-xl border border-dashed border-border/70 text-center bg-muted/10 space-y-3">
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
               <Layers className="h-5 w-5" />
             </div>
@@ -534,15 +534,15 @@ export function FigmaProjectSelector({
                 <div
                   key={project.fileKey}
                   onClick={() => !isProcessing && handleSelect(project)}
-                  className={`group relative flex items-center justify-between p-3 rounded-xl border transition-all duration-200 cursor-pointer ${
+                  className={`group relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border transition-all duration-200 cursor-pointer ${
                     isCurrentlyImporting
                       ? "bg-primary/10 border-primary/40 ring-1 ring-primary/20"
                       : "bg-card border-border hover:border-primary/40 hover:bg-muted/30 shadow-xs"
                   }`}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0 pr-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Thumbnail */}
-                    <div className="w-12 h-12 rounded-lg bg-muted/60 border border-border/50 flex items-center justify-center shrink-0 overflow-hidden relative">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-muted/60 border border-border/50 flex items-center justify-center shrink-0 overflow-hidden relative">
                       {project.thumbnailUrl ? (
                         <img
                           src={project.thumbnailUrl}
@@ -551,34 +551,34 @@ export function FigmaProjectSelector({
                         />
                       ) : (
                         <div className="w-full h-full bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                          <PenTool className="h-5 w-5 text-primary/70" />
+                          <PenTool className="h-4 w-4 sm:h-5 sm:w-5 text-primary/70" />
                         </div>
                       )}
                     </div>
 
                     {/* Meta */}
-                    <div className="min-w-0 space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <h4 className="font-semibold text-xs sm:text-sm text-foreground truncate group-hover:text-primary transition-colors">
                           {project.name}
                         </h4>
                         {project.isRecent && (
                           <Badge
                             variant="secondary"
-                            className="text-[10px] px-1.5 py-0 h-4 font-normal"
+                            className="text-[9px] sm:text-[10px] px-1.5 py-0 h-4 font-normal shrink-0"
                           >
                             Recent
                           </Badge>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-muted-foreground">
                         {project.projectName && (
-                          <span className="truncate max-w-35 font-medium">
+                          <span className="truncate max-w-30 sm:max-w-35 font-medium">
                             {project.projectName}
                           </span>
                         )}
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 shrink-0">
                           <Clock className="h-3 w-3" />
                           {formatRelativeTime(project.lastModified)}
                         </span>
@@ -587,32 +587,34 @@ export function FigmaProjectSelector({
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => removeProject(project.fileKey, e)}
-                      className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-opacity"
-                      title="Remove from list"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                  <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/40">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => removeProject(project.fileKey, e)}
+                        className="h-7 sm:h-8 w-7 sm:w-8 p-0 text-muted-foreground hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                        title="Remove from list"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
 
-                    <a
-                      href={project.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="opacity-0 group-hover:opacity-100 h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                      title="Open in Figma"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
+                      <a
+                        href={project.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-7 sm:h-8 w-7 sm:w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                        title="Open in Figma"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
 
                     <Button
                       size="sm"
                       disabled={isProcessing}
-                      className={`h-8 px-3 text-xs font-medium transition-all ${
+                      className={`h-7 sm:h-8 px-2.5 sm:px-3 text-xs font-medium transition-all ${
                         isCurrentlyImporting
                           ? "bg-primary text-primary-foreground"
                           : "bg-primary/90 text-primary-foreground hover:bg-primary"
@@ -620,7 +622,7 @@ export function FigmaProjectSelector({
                     >
                       {isCurrentlyImporting ? (
                         <>
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />
                           Analyzing...
                         </>
                       ) : (
