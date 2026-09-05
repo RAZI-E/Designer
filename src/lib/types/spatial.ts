@@ -131,12 +131,30 @@ export interface DesignExtractionResult {
   };
 }
 
+export interface GitComponentSignature {
+  name: string;
+  path: string;
+  exports: string[];
+  props: string[];
+  isDefault: boolean;
+}
+
+export interface GitAnalysisData {
+  framework?: string;
+  stylingSolution?: string;
+  dependencies?: string[];
+  devDependencies?: string[];
+  tailwindConfig?: string;
+  componentSignatures?: GitComponentSignature[];
+}
+
 export interface SpecDocument {
   source: "figma" | "git" | "vision";
   sourceUrl?: string;
   projectName: string;
   extraction: DesignExtractionResult;
   fileTree?: FileTreeNode[];
+  gitData?: GitAnalysisData;
   metadata: {
     extractedAt: string;
     sourceWidth: number;

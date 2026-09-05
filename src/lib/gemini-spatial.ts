@@ -12,6 +12,8 @@ export const elementSpatialSchema = {
       type: "string",
       enum: ["nav", "header", "main", "section", "article", "aside", "footer", "div", "button", "input", "a"],
     },
+    textContent: { type: "string" },
+    componentType: { type: "string" },
     layout: {
       type: "object",
       properties: {
@@ -179,59 +181,46 @@ export const extractionResponseSchema = {
 };
 
 export function buildExtractionPrompt(): string {
-  return `You are a Computer Vision Spatial Engineer specializing in UI design analysis.
+  return `You are a Principal Computer Vision Spatial Engineer and Senior UI Architect specializing in pixel-faithful design extraction.
 
-Analyze this design image and extract EVERY visible element with mathematical precision.
+Analyze this design image and extract EVERY visible element, container, navbar, button, badge, input, card, and typography node with exact mathematical precision.
 
-## Output Requirements
+## Critical Instructions for Extraction:
+1. **EXACT TEXT CONTENT EXTRACTION (MANDATORY)**:
+   - For every text element, button label, badge, heading, paragraph, menu item, icon label, or input placeholder, you MUST extract the EXACT visible text in the \`textContent\` property.
+   - Do NOT omit text content or use placeholders like "Lorem ipsum". Extract the real words visible in the image.
 
-### Desktop Layout (16:9 ratio, base 1920x1080)
-For each element, provide:
-- **exact pixel coordinates** (x, y, width, height) relative to a 1920x1080 canvas
-- **viewport percentages** (top%, left%, width%, height%) for responsive scaling
-- **position mode**: fixed, absolute, flex, grid, or sticky
-- **margins and padding** as [top, right, bottom, left] in px
-- **gap** between children in px
-- **alignment**: justify and align values
-- **z-index** if layered
+2. **COMPONENT IDENTIFICATION**:
+   - Set \`componentType\` accurately: "Navbar", "Hero Section", "Primary Button", "Secondary Button", "Search Input", "Feature Card", "Pricing Card", "Badge / Tag", "Heading (H1/H2)", "Body Text", "Footer", "Avatar", etc.
 
-### Mobile Layout (9:16 ratio, base 390x844)
-For each element, provide:
-- **stack direction**: row or column
-- **margins and padding** adapted for mobile
-- **visibility**: visible, hidden, drawer, or accordion
-- **position mode**
+3. **DESKTOP LAYOUT (16:9 ratio, base 1920x1080)**:
+   - **coordinates**: Exact pixel bounds (x, y, width, height) relative to the 1920x1080 canvas.
+   - **viewportPercentage**: top%, left%, width%, height% for responsive behavior.
+   - **positionMode**: "flex", "grid", "fixed", "absolute", or "sticky".
+   - **margins and padding**: [top, right, bottom, left] in px.
+   - **gap**: Gap between children in px.
+   - **alignment**: justify and align values ("start", "center", "end", "between", "around", "stretch").
+   - **zIndex**: If elements overlay each other.
 
-### Styling Extraction
-- **background-color**: Full CSS value including gradients (e.g., "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)")
-- **border-radius**: Per-corner pixel values AND tailwind equivalent (e.g., 12px -> "rounded-xl")
-- **border**: width, style, color
-- **box-shadow**: Full CSS shadow string. Distinguish:
-  - Outer glow: "0 0 50px -12px rgba(99,102,241,0.25)"
-  - Inner shadow: "inset 0 2px 4px rgba(0,0,0,0.1)"
-  - Drop shadow: "0 10px 15px -3px rgba(0,0,0,0.1)"
-- **glow/ring**: Spread, blur, color, and tailwind class
-- **backdrop-blur**: Value like "backdrop-blur-xl"
-- **opacity**: 0-1
+4. **MOBILE LAYOUT (9:16 ratio, base 390x844)**:
+   - **stackDirection**: "row" or "col" (desktop rows typically collapse to "col").
+   - **margins and padding**: Proportional mobile padding/margin in px.
+   - **visibility**: "visible", "hidden", "drawer", or "accordion".
 
-### Typography
-- font-family, font-size (px), font-weight, line-height (px), letter-spacing, color, text-transform
+5. **STYLING EXTRACTION**:
+   - **backgroundColor**: Full CSS value (hex, rgba, or gradient like "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)").
+   - **borderRadius**: Exact per-corner radii AND closest Tailwind class (e.g. 12px -> "rounded-xl", 9999px -> "rounded-full").
+   - **border**: width, style ("solid", "dashed", "none"), and hex/rgba color.
+   - **boxShadow**: Full CSS box-shadow string (including drop shadows, inner shadows, and outer glows).
+   - **typography**: fontFamily, fontSizePx, fontWeight (400, 500, 600, 700), lineHeightPx, letterSpacing, color, textTransform.
 
-### Micro-Interactions
-- **hover**: transform, background-color change, glow, cursor, transition duration
-- **active/click**: scale transform, ring effect
-- **focus-visible**: ring style
+6. **MICRO-INTERACTIONS**:
+   - **hoverEffect**: cursor ("pointer"), transitionDurationMs, hover transform, hover backgroundColor, glow.
+   - **activeClickEffect**: active transform (e.g. "scale(0.98)").
 
-## Semantic Tags
-Map each element to: nav, header, main, section, article, aside, footer, div, button, input, a
-
-## Important
-- Extract ALL visible elements, even small ones (badges, icons, dividers, tags)
-- Be precise with pixel measurements - estimate from visual proportions
-- For gradients, specify exact color stops and positions
-- For shadows, include ALL shadow layers (multi-layer shadows are common)
-- Map every radius to the closest Tailwind class
-- Include opacity for semi-transparent elements`;
+7. **GLOBAL DESIGN TOKENS**:
+   - Collect all unique colors with semantic names (background, foreground, primary, secondary, accent, border, muted).
+   - Collect all fonts, shadows, and gradients.`;
 }
 
 export function normalizeToDesktop(
@@ -258,6 +247,8 @@ export function normalizeToDesktop(
 
     return {
       ...el,
+      textContent: el.textContent,
+      componentType: el.componentType,
       layout: {
         ...el.layout,
         desktop_16_9: {

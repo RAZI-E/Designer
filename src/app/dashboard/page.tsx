@@ -205,10 +205,12 @@ export default function DashboardPage() {
         sourceUrl: gitUrl,
         projectName: gitUrl.split("/").pop()?.replace(".git", "") || "project",
         extraction: {
-          elements: data.componentSignatures.map((sig: { name: string; path: string }) => ({
+          elements: data.componentSignatures.map((sig: { name: string; path: string; props: string[]; exports: string[]; isDefault: boolean }) => ({
             id: sig.path,
             name: sig.name,
             semanticTag: "div" as const,
+            componentType: `React Component (${sig.path})`,
+            textContent: sig.props.length > 0 ? `Props: ${sig.props.join(", ")}` : `Component: ${sig.name}`,
             layout: {
               desktop_16_9: {
                 positionMode: "flex" as const,
@@ -230,6 +232,14 @@ export default function DashboardPage() {
           globalTokens: { colors: {}, fonts: {}, shadows: [], gradients: [] },
         },
         fileTree: data.fileTree,
+        gitData: {
+          framework: data.framework,
+          stylingSolution: data.stylingSolution,
+          dependencies: data.dependencies,
+          devDependencies: data.devDependencies,
+          tailwindConfig: data.tailwindConfig,
+          componentSignatures: data.componentSignatures,
+        },
         metadata: {
           extractedAt: new Date().toISOString(),
           sourceWidth: 1920,

@@ -254,12 +254,14 @@ function generateSystemPrompt(doc: SpecDocument): string {
 ## Context
 You are working on a project called "${doc.projectName}". The design has been analyzed and converted into a structured specification. Your task is to implement the components exactly as specified, following the design tokens and layout rules provided.
 
-## Key Principles
-1. **Pixel-Perfect Implementation**: Match the exact spacing, colors, and typography from the spec
-2. **Component Composition**: Build reusable, composable components following React best practices
-3. **Responsive Design**: Ensure components work across all screen sizes
-4. **Accessibility**: Include proper ARIA labels, semantic HTML, and keyboard navigation
-5. **Type Safety**: Use TypeScript for all props and component definitions
+## Key Principles & Execution Directives
+1. **Pixel-Perfect & Layout Fidelity**: Match the exact spacing, colors, padding, margins, borders, radiuses, shadows, and typography from the spec.
+2. **Exact Text & Copy Preservation**: Every headline, subtitle, button label, badge, and description MUST use the exact text strings provided in this specification without replacing them with dummy placeholder text.
+3. **Component Composition & Modularity**: Build reusable, composable components following React best practices.
+4. **Complete Code Without Omissions**: Do NOT provide abbreviated snippets or TODO comments; output 100% complete, fully styled code.
+5. **Responsive Design**: Ensure components work smoothly across desktop (16:9) and mobile (9:16) screen sizes.
+6. **Accessibility & Semantics**: Include proper ARIA labels, semantic HTML tags, and keyboard navigation.
+7. **Type Safety**: Use TypeScript for all props and component definitions.
 
 ## Tech Stack
 - **Framework**: Next.js (App Router)
