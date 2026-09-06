@@ -14,20 +14,38 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const imageFile = formData.get("image") as File | null;
+    const imageUrl = formData.get("imageUrl") as string | null;
 
-    if (!imageFile) {
+    let base64 = "";
+    let mimeType = "image/png";
+
+    if (imageFile) {
+      const bytes = await imageFile.arrayBuffer();
+      base64 = Buffer.from(bytes).toString("base64");
+      mimeType = imageFile.type || "image/png";
+    } else if (imageUrl) {
+      try {
+        const imageRes = await fetch(imageUrl);
+        if (!imageRes.ok) throw new Error(`Failed to fetch image from URL: ${imageRes.statusText}`);
+        const arrayBuf = await imageRes.arrayBuffer();
+        base64 = Buffer.from(arrayBuf).toString("base64");
+        mimeType = imageRes.headers.get("content-type") || "image/png";
+      } catch (err) {
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : "Failed to download image from URL" },
+          { status: 400 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: "Image file is required" },
+        { error: "Image file or Image URL is required" },
         { status: 400 }
       );
     }
 
-    const bytes = await imageFile.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-
     const imagePart = {
       inlineData: {
-        mimeType: imageFile.type || "image/png",
+        mimeType,
         data: base64,
       },
     };
@@ -37,10 +55,10 @@ export async function POST(request: NextRequest) {
     // Prioritized list of Gemini vision models with automatic fallback
     const candidateModels = [
       process.env.GEMINI_MODEL,
-      "gemini-3.5-flash",
-      "gemini-3.6-flash",
       "gemini-3.7-flash",
-      "gemini-3.5-flash-lite",
+      "gemini-3.7-pro",
+      "gemini-3.5-flash",
+      "gemini-2.5-flash",
       "gemini-flash-latest",
     ].filter(Boolean) as string[];
 
@@ -77,8 +95,8 @@ export async function POST(request: NextRequest) {
 
     const raw = JSON.parse(response.text || '{"elements":[],"globalTokens":{"colors":{},"fonts":{},"shadows":[],"gradients":[]}}');
 
-    let imgWidth = 1920;
-    let imgHeight = 1080;
+    const imgWidth = 1920;
+    const imgHeight = 1080;
 
     const normalizedElements = normalizeToDesktop(raw.elements || [], imgWidth, imgHeight);
 
@@ -98,7 +116,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Vision extraction error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to extract spatial data" },
+      { error: error instanceof Error ? error.message : "Failed to extract spatial data from screenshot" },
       { status: 500 }
     );
   }

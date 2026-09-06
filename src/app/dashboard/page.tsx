@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   GitBranch,
-  PenTool,
   FileImage,
   Upload,
   Copy,
@@ -22,24 +21,24 @@ import {
   Eye,
   Code2,
   FileText,
-  Unlink,
+  Camera,
+  Clipboard,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FigmaProjectSelector } from "@/components/figma/figma-project-selector";
 import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spatial";
 
-type InputSource = "git" | "figma" | "image" | null;
+type InputSource = "image" | "git" | null;
 type ProcessingStep = "idle" | "extracting" | "generating" | "complete";
 
 export default function DashboardPage() {
-  const [source, setSource] = useState<InputSource>(null);
+  const [source, setSource] = useState<InputSource>("image");
   const [gitUrl, setGitUrl] = useState("");
   const [gitToken, setGitToken] = useState("");
-  const [figmaUrl, setFigmaUrl] = useState("");
-  const [figmaPat, setFigmaPat] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
 
   const [step, setStep] = useState<ProcessingStep>("idle");
@@ -48,9 +47,7 @@ export default function DashboardPage() {
   const [generatedPrompt, setGeneratedPrompt] = useState<GeneratedPrompt | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [figmaConnected, setFigmaConnected] = useState(false);
-  const [figmaChecking, setFigmaChecking] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,107 +74,51 @@ export default function DashboardPage() {
   useEffect(() => {
     return () => {
       if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     };
-  }, []);
+  }, [imagePreviewUrl]);
 
-  const [patConnecting, setPatConnecting] = useState(false);
-  const [patError, setPatError] = useState<string | null>(null);
-  const [connectMethod, setConnectMethod] = useState<"oauth" | "pat">("oauth");
-
+  // Global Clipboard Paste (Ctrl+V / Cmd+V) Listener for screenshots
   useEffect(() => {
-    checkFigmaAuth();
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("figma_error")) {
-      setError(params.get("figma_error"));
-      window.history.replaceState({}, "", "/dashboard");
-    }
-    if (params.get("figma_connected")) {
-      setFigmaConnected(true);
-      window.history.replaceState({}, "", "/dashboard");
-    }
-  }, []);
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
-  const connectFigmaPat = async (tokenToUse?: string) => {
-    const token = (tokenToUse || figmaPat).trim();
-    if (!token) return;
-    setPatConnecting(true);
-    setPatError(null);
-    try {
-      const res = await fetch("/api/figma/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Invalid Personal Access Token");
-      }
-      setFigmaConnected(true);
-      setFigmaPat(token);
-      localStorage.setItem("ep_figma_pat", token);
-    } catch (err) {
-      setPatError(err instanceof Error ? err.message : "Failed to connect with token");
-    } finally {
-      setPatConnecting(false);
-    }
-  };
-
-  const checkFigmaAuth = async () => {
-    try {
-      const res = await fetch("/api/figma/token");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.authenticated && !data.expired) {
-          setFigmaConnected(true);
-          return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            setSource("image");
+            setImageFile(file);
+            const preview = URL.createObjectURL(file);
+            setImagePreviewUrl(preview);
+            setImageUrl("");
+            setError(null);
+            break;
+          }
         }
       }
-      // Check saved PAT fallback
-      const savedPat = localStorage.getItem("ep_figma_pat");
-      if (savedPat) {
-        setFigmaPat(savedPat);
-        await connectFigmaPat(savedPat);
-      } else {
-        setFigmaConnected(false);
-      }
-    } catch {
-      setFigmaConnected(false);
-    } finally {
-      setFigmaChecking(false);
-    }
-  };
+    };
 
-  const [selectedOauthScope, setSelectedOauthScope] = useState<"file_content:read" | "files:read">("file_content:read");
-
-  const connectFigma = (scopeOverride?: string) => {
-    const params = new URLSearchParams();
-    params.set("redirect_to", "/dashboard");
-    params.set("scope", scopeOverride || selectedOauthScope);
-    window.location.href = `/api/figma/authorize?${params.toString()}`;
-  };
-
-  const disconnectFigma = async () => {
-    await fetch("/api/figma/revoke", { method: "POST" });
-    localStorage.removeItem("ep_figma_pat");
-    setFigmaPat("");
-    setFigmaConnected(false);
-  };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   const resetState = useCallback(() => {
     stopProgressAnimation();
-    setSource(null);
+    setSource("image");
     setGitUrl("");
     setGitToken("");
-    setFigmaUrl("");
-    setFigmaPat("");
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     setImageFile(null);
+    setImagePreviewUrl(null);
     setImageUrl("");
     setStep("idle");
     setProgress(0);
     setSpecDocument(null);
     setGeneratedPrompt(null);
     setError(null);
-  }, [stopProgressAnimation]);
+  }, [stopProgressAnimation, imagePreviewUrl]);
 
   const handleGitAnalyze = async () => {
     if (!gitUrl) return;
@@ -272,103 +213,8 @@ export default function DashboardPage() {
     }
   };
 
-  const handleFigmaAnalyze = async (urlOverride?: string) => {
-    const targetUrl = urlOverride || figmaUrl;
-    if (!targetUrl) return;
-    setFigmaUrl(targetUrl);
-    setStep("extracting");
-    setProgress(4);
-    setError(null);
-    startProgressAnimation(48, 220);
-
-    try {
-      const response = await fetch("/api/figma", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileUrl: targetUrl, personalAccessToken: figmaPat || undefined }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        if (data.needsAuth) {
-          setFigmaConnected(false);
-          throw new Error("Please connect your Figma account first.");
-        }
-        throw new Error(data.error || "Failed to parse Figma file");
-      }
-
-      const data = await response.json();
-
-      const extractedElements = data.elements || data.components || [];
-      const extractedTokens = data.globalTokens || data.designTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] };
-
-      const doc: SpecDocument = {
-        source: "figma",
-        sourceUrl: targetUrl,
-        projectName: data.metadata?.fileName || "figma-design",
-        extraction: {
-          elements: extractedElements,
-          globalTokens: extractedTokens,
-        },
-        metadata: {
-          extractedAt: new Date().toISOString(),
-          sourceWidth: data.metadata?.width || 1920,
-          sourceHeight: data.metadata?.height || 1080,
-          totalElements: data.metadata?.totalComponents || extractedElements.length,
-        },
-      };
-
-      // Save to recent projects
-      try {
-        const fileKeyMatch = targetUrl.match(/figma\.com\/(?:design|file)\/([a-zA-Z0-9]+)/);
-        if (fileKeyMatch) {
-          const key = fileKeyMatch[1];
-          const stored = localStorage.getItem("ep_recent_figma_projects");
-          const recents = stored ? JSON.parse(stored) : [];
-          const newItem = {
-            id: key,
-            fileKey: key,
-            name: data.metadata?.fileName || "Figma Design",
-            url: targetUrl,
-            projectName: "Figma File",
-            lastModified: new Date().toISOString(),
-            isRecent: true,
-          };
-          const updated = [newItem, ...recents.filter((r: any) => r.fileKey !== key)].slice(0, 15);
-          localStorage.setItem("ep_recent_figma_projects", JSON.stringify(updated));
-        }
-      } catch (err) {
-        console.warn("Could not save to recent Figma projects:", err);
-      }
-
-      setSpecDocument(doc);
-      setStep("generating");
-      startProgressAnimation(88, 180);
-
-      const promptResponse = await fetch("/api/generate-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ specDocument: doc }),
-      });
-
-      if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
-      const promptData = await promptResponse.json();
-      setGeneratedPrompt(promptData);
-      stopProgressAnimation();
-      setProgress(100);
-      setTimeout(() => setStep("complete"), 250);
-    } catch (err) {
-      stopProgressAnimation();
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setStep("idle");
-      setProgress(0);
-    }
-  };
-
-
-
   const handleVisionAnalyze = async () => {
-    if (!imageFile) return;
+    if (!imageFile && !imageUrl) return;
     setStep("extracting");
     setProgress(4);
     setError(null);
@@ -376,7 +222,11 @@ export default function DashboardPage() {
 
     try {
       const formData = new FormData();
-      formData.append("image", imageFile);
+      if (imageFile) {
+        formData.append("image", imageFile);
+      } else if (imageUrl) {
+        formData.append("imageUrl", imageUrl);
+      }
 
       const response = await fetch("/api/analyze-vision", {
         method: "POST",
@@ -392,7 +242,7 @@ export default function DashboardPage() {
 
       const doc: SpecDocument = {
         source: "vision",
-        projectName: imageFile.name.replace(/\.[^/.]+$/, "") || "design-analysis",
+        projectName: imageFile?.name.replace(/\.[^/.]+$/, "") || "screenshot-analysis",
         extraction: {
           elements: data.elements || [],
           globalTokens: data.globalTokens || { colors: {}, fonts: {}, shadows: [], gradients: [] },
@@ -429,12 +279,27 @@ export default function DashboardPage() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileSelect = (file: File) => {
     if (file && file.type.startsWith("image/")) {
       setImageFile(file);
-      setImageUrl(file.name);
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+      const preview = URL.createObjectURL(file);
+      setImagePreviewUrl(preview);
+      setImageUrl("");
+      setError(null);
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileSelect(file);
   };
 
   const copyToClipboard = async (text: string) => {
@@ -481,12 +346,6 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {figmaConnected && (
-              <Button variant="ghost" size="sm" onClick={disconnectFigma} className="h-8 px-2 sm:px-3 text-xs">
-                <Unlink className="h-3.5 w-3.5 sm:mr-1" />
-                <span className="hidden sm:inline">Disconnect Figma</span>
-              </Button>
-            )}
             {step === "complete" && (
               <Button variant="outline" size="sm" onClick={resetState} className="h-8 px-2.5 sm:px-3 text-xs">
                 <Sparkles className="h-3.5 w-3.5 sm:mr-1" />
@@ -503,335 +362,104 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           <div className="space-y-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-base sm:text-lg">Select Input Source</CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Choose a design source to analyze and convert into IDE prompts.
+                  Upload a screenshot for AI spatial extraction or analyze a GitHub repository.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <Button
-                    variant={source === "git" ? "default" : "outline"}
-                    className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 p-1 sm:p-2 text-xs sm:text-sm"
-                    onClick={() => setSource("git")}
-                    disabled={isProcessing}
-                  >
-                    <GitBranch className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                    <span className="truncate">Git Repo</span>
-                  </Button>
-                  <Button
-                    variant={source === "figma" ? "default" : "outline"}
-                    className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 p-1 sm:p-2 text-xs sm:text-sm"
-                    onClick={() => setSource("figma")}
-                    disabled={isProcessing}
-                  >
-                    <PenTool className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                    <span className="truncate">Figma</span>
-                  </Button>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant={source === "image" ? "default" : "outline"}
-                    className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 p-1 sm:p-2 text-xs sm:text-sm"
-                    onClick={() => setSource("image")}
-                    disabled={isProcessing}
+                    className="h-auto py-3 px-3 flex flex-col items-center gap-1.5 text-center relative"
+                    onClick={() => {
+                      setSource("image");
+                      setError(null);
+                    }}
                   >
-                    <FileImage className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                    <span className="truncate">Design Image</span>
+                    <div className="flex items-center gap-1.5">
+                      <FileImage className="h-4 w-4" />
+                      <span className="text-xs sm:text-sm font-semibold">Screenshot / Image</span>
+                    </div>
+                    <span className="text-[10px] opacity-80 font-normal">Multimodal Vision Engine</span>
+                    <Badge variant="secondary" className="absolute -top-2 right-2 text-[9px] px-1 py-0 bg-primary/20 text-primary border-primary/30">
+                      Recommended
+                    </Badge>
+                  </Button>
+
+                  <Button
+                    variant={source === "git" ? "default" : "outline"}
+                    className="h-auto py-3 px-3 flex flex-col items-center gap-1.5 text-center"
+                    onClick={() => {
+                      setSource("git");
+                      setError(null);
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <GitBranch className="h-4 w-4" />
+                      <span className="text-xs sm:text-sm font-semibold">GitHub Repo</span>
+                    </div>
+                    <span className="text-[10px] opacity-80 font-normal">Codebase Architecture</span>
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {source === "git" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>GitHub Repository</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Repository URL</label>
-                    <Input
-                      placeholder="https://github.com/owner/repo"
-                      value={gitUrl}
-                      onChange={(e) => setGitUrl(e.target.value)}
-                      disabled={isProcessing}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      GitHub Token <span className="text-muted-foreground">(optional, for private repos)</span>
-                    </label>
-                    <Input
-                      type="password"
-                      placeholder="ghp_xxxxxxxxxxxx"
-                      value={gitToken}
-                      onChange={(e) => setGitToken(e.target.value)}
-                      disabled={isProcessing}
-                    />
-                  </div>
-                  <Button
-                    className="w-full"
-                    onClick={handleGitAnalyze}
-                    disabled={!gitUrl || isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <GitBranch className="h-4 w-4 mr-2" />
-                        Analyze Repository
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {source === "figma" && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                        <PenTool className="h-3.5 w-3.5" />
-                      </div>
-                      <div className="min-w-0">
-                        <CardTitle className="text-sm sm:text-base font-semibold">Figma Design</CardTitle>
-                        <CardDescription className="text-xs text-muted-foreground truncate">
-                          Import workspace files or paste a direct design link
-                        </CardDescription>
-                      </div>
-                    </div>
-                    {figmaConnected && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Connected
-                      </span>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {figmaChecking ? (
-                    <div className="flex items-center justify-center p-8 text-xs text-muted-foreground gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      Checking Figma connection...
-                    </div>
-                  ) : figmaConnected ? (
-                    <FigmaProjectSelector
-                      onSelectProject={(url) => handleFigmaAnalyze(url)}
-                      onDisconnect={disconnectFigma}
-                      isProcessing={isProcessing}
-                      activeProcessingUrl={figmaUrl}
-                    />
-                  ) : (
-                    <div className="space-y-3.5">
-                      {/* Dual Connect Options (OAuth or Token on Any Device) */}
-                      <div className="p-3 sm:p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="space-y-0.5 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-foreground">Connect Figma Account</p>
-                            <p className="text-[11px] text-muted-foreground">Access your files on any device via OAuth or Token</p>
-                          </div>
-                          <div className="flex items-center p-0.5 bg-background/60 rounded-md border text-[11px] shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setConnectMethod("oauth")}
-                              className={`px-2 py-0.5 rounded transition-all ${
-                                connectMethod === "oauth" ? "bg-primary text-primary-foreground font-medium shadow-xs" : "text-muted-foreground hover:text-foreground"
-                              }`}
-                            >
-                              OAuth
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConnectMethod("pat")}
-                              className={`px-2 py-0.5 rounded transition-all ${
-                                connectMethod === "pat" ? "bg-primary text-primary-foreground font-medium shadow-xs" : "text-muted-foreground hover:text-foreground"
-                              }`}
-                            >
-                              Token
-                            </button>
-                          </div>
-                        </div>
-
-                        {connectMethod === "oauth" ? (
-                          <div className="space-y-2.5 pt-1 border-t border-border/40">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
-                              <span className="text-muted-foreground text-[11px] font-medium">OAuth Scope:</span>
-                              <div className="flex items-center gap-1 bg-muted/70 p-0.5 rounded border border-border/60 text-[10px]">
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedOauthScope("file_content:read")}
-                                  className={`px-2 py-0.5 rounded transition-all font-mono ${
-                                    selectedOauthScope === "file_content:read"
-                                      ? "bg-background text-foreground font-semibold shadow-xs"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  }`}
-                                >
-                                  file_content:read (Standard)
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedOauthScope("files:read")}
-                                  className={`px-2 py-0.5 rounded transition-all font-mono ${
-                                    selectedOauthScope === "files:read"
-                                      ? "bg-background text-foreground font-semibold shadow-xs"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  }`}
-                                >
-                                  files:read (Legacy)
-                                </button>
-                              </div>
-                            </div>
-
-                            <Button
-                              size="sm"
-                              onClick={() => connectFigma(selectedOauthScope)}
-                              className="w-full h-8.5 text-xs font-medium shadow-xs"
-                            >
-                              <PenTool className="h-3.5 w-3.5 mr-1.5" />
-                              Authorize with Figma ({selectedOauthScope})
-                            </Button>
-
-                            <p className="text-[10px] text-muted-foreground leading-relaxed">
-                              If Figma reports <em>&quot;Invalid scopes for app&quot;</em>, your app in{" "}
-                              <a
-                                href="https://www.figma.com/developers/apps"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="underline text-primary hover:opacity-80"
-                              >
-                                Figma Developer Hub
-                              </a>{" "}
-                              has a different scope enabled. Switch to the matching scope above, or use <strong>Token</strong> mode for instant access on any device.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2 pt-1 border-t border-border/40">
-                            <div className="flex gap-2">
-                              <Input
-                                type="password"
-                                placeholder="figd_... (Personal Access Token)"
-                                value={figmaPat}
-                                onChange={(e) => {
-                                  setFigmaPat(e.target.value);
-                                  setPatError(null);
-                                }}
-                                className="h-8 text-xs font-mono"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && figmaPat.trim()) connectFigmaPat();
-                                }}
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => connectFigmaPat()}
-                                disabled={!figmaPat.trim() || patConnecting}
-                                className="h-8 px-3 text-xs font-medium shrink-0"
-                              >
-                                {patConnecting ? (
-                                  <>
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                                    Connecting...
-                                  </>
-                                ) : (
-                                  "Connect"
-                                )}
-                              </Button>
-                            </div>
-                            {patError && <p className="text-[11px] text-destructive">{patError}</p>}
-                            <p className="text-[10px] text-muted-foreground">
-                              Works on all devices without redirect URLs. Get token in Figma &gt; Settings &gt; Account.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Minimal Divider */}
-                      <div className="relative flex items-center py-0.5">
-                        <div className="grow border-t border-border/60" />
-                        <span className="shrink-0 px-2.5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">or import link</span>
-                        <div className="grow border-t border-border/60" />
-                      </div>
-
-                      {/* Direct URL and PAT Inputs */}
-                      <div className="space-y-2.5">
-                        <Input
-                          placeholder="https://www.figma.com/design/..."
-                          value={figmaUrl}
-                          onChange={(e) => setFigmaUrl(e.target.value)}
-                          disabled={isProcessing}
-                          className="h-9 text-xs font-mono"
-                        />
-
-                        <Input
-                          type="password"
-                          placeholder="Personal Access Token (optional, for private files)"
-                          value={figmaPat}
-                          onChange={(e) => setFigmaPat(e.target.value)}
-                          disabled={isProcessing}
-                          className="h-8 text-xs font-mono"
-                        />
-
-                        <Button
-                          className="w-full h-9 text-xs font-medium"
-                          onClick={() => handleFigmaAnalyze()}
-                          disabled={!figmaUrl || isProcessing || (!figmaConnected && !figmaPat)}
-                        >
-                          {isProcessing ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                              Extracting Blueprint...
-                            </>
-                          ) : (
-                            <>
-                              <PenTool className="h-3.5 w-3.5 mr-1.5" />
-                              Extract Blueprint
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
             {source === "image" && (
-              <Card>
+              <Card className="border-primary/30 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileImage className="h-5 w-5 text-primary" />
-                    Design Image Upload
-                  </CardTitle>
-                  <CardDescription>
-                    Upload a design mockup or screenshot to extract layout coordinates, component signatures, and design tokens using Gemini 3.5 Flash.
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-primary" />
+                      UI Screenshot & Mockup Analysis
+                    </CardTitle>
+                    <Badge variant="outline" className="text-[10px] gap-1 font-mono">
+                      <Clipboard className="h-3 w-3" /> Ctrl+V to Paste
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Upload or paste any UI screenshot. Gemini Multimodal Spatial AI will extract exact pixel coordinates, verbatim text copy, Tailwind design tokens, and components.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Tabs defaultValue="upload">
                     <TabsList className="w-full">
-                      <TabsTrigger value="upload" className="flex-1">
-                        Upload Image
+                      <TabsTrigger value="upload" className="flex-1 text-xs">
+                        Upload or Paste Image
                       </TabsTrigger>
-                      <TabsTrigger value="url" className="flex-1">
+                      <TabsTrigger value="url" className="flex-1 text-xs">
                         Image URL
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="upload" className="space-y-4">
+
+                    <TabsContent value="upload" className="space-y-4 pt-2">
                       <div
-                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors bg-muted/10"
+                        className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
+                          isDragging
+                            ? "border-primary bg-primary/10 scale-[0.99]"
+                            : "border-muted-foreground/30 hover:border-primary/50 bg-muted/10"
+                        }`}
                         onClick={() => imageInputRef.current?.click()}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragging(true);
+                        }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={handleDrop}
                       >
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-medium text-foreground">
-                          {imageFile ? imageFile.name : "Click to upload design image"}
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3 text-primary">
+                          <Upload className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground mb-1">
+                          {imageFile ? imageFile.name : "Click to browse or Drag & Drop"}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          PNG, JPG, WebP, GIF, SVG
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Supports PNG, JPG, WebP, GIF, SVG &bull; Or press <strong>Ctrl+V</strong> anywhere to paste screenshot
                         </p>
+                        <Badge variant="secondary" className="text-[10px]">
+                          Snipping Tool / Figma / Web Screenshots Supported
+                        </Badge>
                       </div>
                       <input
                         ref={imageInputRef}
@@ -841,58 +469,130 @@ export default function DashboardPage() {
                         onChange={handleImageUpload}
                       />
                     </TabsContent>
-                    <TabsContent value="url" className="space-y-4">
+
+                    <TabsContent value="url" className="space-y-4 pt-2">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Image URL</label>
+                        <label className="text-xs sm:text-sm font-medium">Public Image URL</label>
                         <Input
-                          placeholder="https://example.com/design.png"
-                          value={imageUrl && imageFile ? "" : imageUrl}
+                          placeholder="https://example.com/screenshot.png"
+                          value={imageUrl}
                           onChange={(e) => {
                             setImageUrl(e.target.value);
                             setImageFile(null);
+                            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+                            setImagePreviewUrl(null);
                           }}
                           disabled={isProcessing}
+                          className="text-xs sm:text-sm"
                         />
                       </div>
                     </TabsContent>
                   </Tabs>
 
-                  {imageFile && (
-                    <div className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/20 text-xs">
-                      <div className="flex items-center gap-2 truncate">
-                        <FileImage className="h-4 w-4 text-primary shrink-0" />
-                        <span className="truncate font-medium">{imageFile.name}</span>
-                        <span className="text-muted-foreground">({(imageFile.size / 1024).toFixed(1)} KB)</span>
+                  {imagePreviewUrl && (
+                    <div className="p-3 rounded-xl border bg-muted/20 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground flex items-center gap-1.5">
+                          <FileImage className="h-3.5 w-3.5 text-primary" />
+                          Screenshot Preview
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs text-muted-foreground hover:text-destructive gap-1 px-2"
+                          onClick={() => {
+                            setImageFile(null);
+                            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+                            setImagePreviewUrl(null);
+                            setImageUrl("");
+                            if (imageInputRef.current) imageInputRef.current.value = "";
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs text-muted-foreground hover:text-destructive"
-                        onClick={() => {
-                          setImageFile(null);
-                          setImageUrl("");
-                          if (imageInputRef.current) imageInputRef.current.value = "";
-                        }}
-                      >
-                        Remove
-                      </Button>
+                      <div className="relative rounded-lg overflow-hidden border max-h-60 bg-black/5 flex items-center justify-center">
+                        <img
+                          src={imagePreviewUrl}
+                          alt="Screenshot preview"
+                          className="max-h-60 w-auto object-contain"
+                        />
+                      </div>
+                      {imageFile && (
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span className="truncate">{imageFile.name}</span>
+                          <span>{(imageFile.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <Button
-                    className="w-full"
+                    className="w-full h-11 text-xs sm:text-sm font-medium shadow-sm"
                     onClick={handleVisionAnalyze}
-                    disabled={!imageFile || isProcessing}
+                    disabled={(!imageFile && !imageUrl) || isProcessing}
                   >
                     {isProcessing ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Analyzing Design...
+                        Extracting Design with Gemini Spatial Vision...
                       </>
                     ) : (
                       <>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Analyze Design with Gemini 3.5 Flash
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Extract Pixel-Accurate Blueprint from Screenshot
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {source === "git" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg">GitHub Repository Architecture</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Analyze a GitHub repository to extract components, interfaces, dependencies, and file structures.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium">Repository URL</label>
+                    <Input
+                      placeholder="https://github.com/owner/repo"
+                      value={gitUrl}
+                      onChange={(e) => setGitUrl(e.target.value)}
+                      disabled={isProcessing}
+                      className="text-xs sm:text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium">Personal Access Token (Optional for private repos)</label>
+                    <Input
+                      type="password"
+                      placeholder="ghp_xxxxxxxxxxxx"
+                      value={gitToken}
+                      onChange={(e) => setGitToken(e.target.value)}
+                      disabled={isProcessing}
+                      className="text-xs sm:text-sm"
+                    />
+                  </div>
+                  <Button
+                    className="w-full h-10 text-xs sm:text-sm"
+                    onClick={handleGitAnalyze}
+                    disabled={!gitUrl || isProcessing}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Analyzing Repository...
+                      </>
+                    ) : (
+                      <>
+                        <GitBranch className="h-4 w-4 mr-2" />
+                        Analyze Repository Architecture
                       </>
                     )}
                   </Button>
@@ -909,9 +609,7 @@ export default function DashboardPage() {
                         {step === "extracting" && (
                           source === "git"
                             ? "Analyzing repository components & structures..."
-                            : source === "figma"
-                            ? "Parsing Figma design & extracting spatial tokens..."
-                            : "Analyzing layout & design tokens with Gemini 3.5 Flash..."
+                            : "Analyzing screenshot layout, typography, & tokens with Gemini Spatial AI..."
                         )}
                         {step === "generating" && "Compiling pixel-accurate IDE prompt & blueprint..."}
                       </span>
@@ -979,15 +677,15 @@ export default function DashboardPage() {
                         <TabsList className="w-max sm:w-full flex justify-start sm:justify-center p-1 h-auto">
                           <TabsTrigger value="viewport" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
                             <Code2 className="h-3 w-3" />
-                            Viewport
+                            Overview & Tokens
                           </TabsTrigger>
                           <TabsTrigger value="spatial" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
                             <Eye className="h-3 w-3" />
-                            Spatial
+                            Spatial Matrix
                           </TabsTrigger>
                           <TabsTrigger value="effects" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
                             <Sparkles className="h-3 w-3" />
-                            Effects
+                            Typography & Copy
                           </TabsTrigger>
                           <TabsTrigger value="responsive" className="gap-1 text-xs py-1.5 px-2.5 sm:px-3">
                             <FileText className="h-3 w-3" />
@@ -1042,7 +740,7 @@ export default function DashboardPage() {
                             }
                           >
                             <Download className="h-4 w-4 mr-2" />
-                            Download Full Blueprint
+                            Download Full Blueprint (.md)
                           </Button>
                         </div>
                       </TabsContent>
@@ -1087,9 +785,8 @@ export default function DashboardPage() {
                   <div className="text-center text-muted-foreground py-12">
                     <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No analysis yet</p>
-                    <p className="text-sm">
-                      Select an input source and provide your design to generate
-                      a pixel-accurate implementation blueprint.
+                    <p className="text-sm max-w-sm mx-auto">
+                      Take a screenshot of any UI or design, press <strong>Ctrl+V</strong> to paste or upload it, and get a pixel-accurate IDE prompt instantly.
                     </p>
                   </div>
                 </CardContent>

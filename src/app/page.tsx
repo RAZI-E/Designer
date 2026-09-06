@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   GitBranch,
-  PenTool,
   FileImage,
   Sparkles,
   ArrowRight,
@@ -14,6 +13,8 @@ import {
   Palette,
   Code2,
   Zap,
+  Camera,
+  LayoutGrid,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -54,22 +55,21 @@ export default function HomePage() {
       <main className="flex-1">
         <section className="container mx-auto px-4 py-12 sm:py-20 text-center">
           <Badge variant="secondary" className="mb-4 inline-flex text-center max-w-full text-xs font-medium py-1 px-3">
-            AI Design to Prompt • Open Source & Free
+            <Sparkles className="h-3.5 w-3.5 mr-1.5 text-primary" />
+            AI Screenshot to Prompt • Pixel-Precision Vision Engine
           </Badge>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-4 sm:mb-6 leading-tight">
-            Convert Design in
+            Convert Any Screenshot into
             <br />
-            <span className="text-primary">Pixel-Accurate Prompts for IDEs</span>
+            <span className="text-primary">Pixel-Accurate IDE Prompts</span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-8 px-2 leading-relaxed">
-            <strong>Designer by Lavaithan</strong> transforms Figma designs, UI mockups, and screenshots
-            into structured, token-efficient IDE prompts with exact component placements, spatial borders,
-            and Tailwind design tokens.
+            Take a screenshot of any website, design mockup, or app, and let our Multimodal Vision AI extract exact component coordinates, verbatim text copy, Tailwind design tokens, and layout structures for Cursor, Claude Code, and Copilot.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-xs sm:max-w-none mx-auto">
             <Link href="/dashboard" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto gap-2 text-sm sm:text-base h-11">
-                Convert Design to Prompt <ArrowRight className="h-4 w-4" />
+                Upload Screenshot to Prompt <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="https://github.com/RAZI-E/Designer" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
@@ -82,59 +82,61 @@ export default function HomePage() {
 
         <section className="container mx-auto px-4 py-10 sm:py-16">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12">
-            Three Input Sources, One Output
+            Two Powerful Input Modes
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-            <Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+            <Card className="hover:border-primary/40 transition-colors">
               <CardHeader>
-                <GitBranch className="h-9 w-9 sm:h-10 sm:w-10 text-primary mb-2" />
-                <CardTitle>Git Repository</CardTitle>
-                <CardDescription>
-                  Analyze existing codebases to extract component signatures,
-                  file structures, and styling patterns.
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                  <FileImage className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-xl">Screenshot & Image Vision Engine</CardTitle>
+                <CardDescription className="text-sm">
+                  Paste or upload any UI screenshot. Gemini Multimodal Vision extracts exact pixel coordinates, verbatim typography text, hex color palettes, and responsive breakdowns.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-xs sm:text-sm text-muted-foreground space-y-1">
-                  <li>Component detection & props extraction</li>
-                  <li>Tailwind config analysis</li>
-                  <li>File tree mapping</li>
+                <ul className="text-xs sm:text-sm text-muted-foreground space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <strong>Instant Clipboard Paste (Ctrl+V):</strong> Paste screenshots directly without saving files.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <strong>Verbatim Text Copy:</strong> Extracts every button label, heading, and description.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <strong>Pixel-Accurate Spacing:</strong> Detects margins, paddings, flex gaps, and border-radii.
+                  </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hover:border-primary/40 transition-colors">
               <CardHeader>
-                <PenTool className="h-9 w-9 sm:h-10 sm:w-10 text-primary mb-2" />
-                <CardTitle>Convert Figma Design into Prompts</CardTitle>
-                <CardDescription>
-                  Connect your Figma workspace to extract root canvas borders, AutoLayout flex parameters,
-                  nested component trees, and typography into structured IDE prompts.
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                  <GitBranch className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-xl">GitHub Repository Architecture</CardTitle>
+                <CardDescription className="text-sm">
+                  Analyze any public GitHub repo to extract component signatures, export interfaces, dependencies, file trees, and Tailwind configurations.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-xs sm:text-sm text-muted-foreground space-y-1">
-                  <li>Root artboard border & padding detection</li>
-                  <li>AutoLayout gap, flex direction & padding extraction</li>
-                  <li>Interactive button, navbar, & text content mapping</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <FileImage className="h-9 w-9 sm:h-10 sm:w-10 text-primary mb-2" />
-                <CardTitle>AI Design to Prompt (Vision)</CardTitle>
-                <CardDescription>
-                  Upload UI screenshots or design mockups for multimodal AI spatial analysis
-                  and mathematical component detection powered by Gemini 3.5 Flash.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="text-xs sm:text-sm text-muted-foreground space-y-1">
-                  <li>High-resolution screenshot analysis</li>
-                  <li>Gemini 3.5 Flash vision spatial extraction</li>
-                  <li>Pixel-accurate coordinates & Tailwind mapping</li>
+                <ul className="text-xs sm:text-sm text-muted-foreground space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <strong>Component Detection:</strong> Extracts TypeScript props and interfaces.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <strong>File Tree Mapping:</strong> Full hierarchy preservation for IDE context.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <strong>Tailwind & Dependency Analysis:</strong> Extracts design tokens from existing codebases.
+                  </li>
                 </ul>
               </CardContent>
             </Card>
@@ -148,38 +150,38 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <div className="text-center p-4 rounded-xl border sm:border-0 bg-card/40 sm:bg-transparent">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Layers className="h-6 w-6 text-primary" />
+                <Camera className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold mb-2">1. Ingest</h3>
+              <h3 className="font-semibold mb-2">1. Snap / Paste</h3>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Upload your design source (Git, Figma, or Image)
+                Take a screenshot of any UI or design and paste it with Ctrl+V.
               </p>
             </div>
             <div className="text-center p-4 rounded-xl border sm:border-0 bg-card/40 sm:bg-transparent">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Palette className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold mb-2">2. Analyze</h3>
+              <h3 className="font-semibold mb-2">2. Vision Extraction</h3>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                AI extracts components, spacing, and design tokens
+                Gemini extracts every color, font, button, container, and verbatim copy.
               </p>
             </div>
             <div className="text-center p-4 rounded-xl border sm:border-0 bg-card/40 sm:bg-transparent">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Code2 className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold mb-2">3. Generate</h3>
+              <h3 className="font-semibold mb-2">3. Prompt Compilation</h3>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Structured Spec DSL with Tailwind-mapped tokens
+                Compiles a structured blueprint with Tailwind classes and CSS variables.
               </p>
             </div>
             <div className="text-center p-4 rounded-xl border sm:border-0 bg-card/40 sm:bg-transparent">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Zap className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold mb-2">4. Deploy</h3>
+              <h3 className="font-semibold mb-2">4. Generate in IDE</h3>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Copy prompt, export markdown, or download .cursorrules
+                Feed the prompt into Cursor, Claude, or Copilot for pixel-perfect code.
               </p>
             </div>
           </div>
@@ -188,43 +190,34 @@ export default function HomePage() {
         <section className="border-t py-12 sm:py-16 bg-muted/20">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3 sm:mb-4">
-              Frequently Asked Questions (AI & Design to Prompt)
+              Frequently Asked Questions
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground text-center mb-8 sm:mb-12 max-w-xl mx-auto px-2">
-              Everything you need to know about converting designs into prompts for Cursor, Claude, and Copilot.
+              Learn how Designer creates pixel-faithful IDE prompts from screenshots and GitHub code.
             </p>
 
             <div className="space-y-4 sm:space-y-6">
               <div className="p-4 sm:p-5 rounded-xl border bg-card">
                 <h3 className="font-semibold text-sm sm:text-base mb-2">
-                  What is Designer by Lavaithan?
+                  How does screenshot to prompt work?
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  <strong>Designer by Lavaithan</strong> is an open-source AI developer tool that converts Figma files, UI screenshots, and Git repositories into mathematically accurate, token-efficient IDE prompts. It extracts root container boundaries, AutoLayout parameters, exact coordinates, paddings, and typography to eliminate hallucinated CSS in AI coding models like Cursor, Claude Code, and GitHub Copilot.
+                  Designer uses advanced Multimodal Spatial Vision AI to inspect your screenshot. It identifies all visual containers, measures bounding box coordinates, extracts typography hierarchy, reads verbatim text, and translates everything into Tailwind CSS utility classes and CSS tokens.
                 </p>
               </div>
 
               <div className="p-4 sm:p-5 rounded-xl border bg-card">
                 <h3 className="font-semibold text-sm sm:text-base mb-2">
-                  How does it convert Figma designs into prompts?
+                  Does the generated prompt prevent hallucinated designs?
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Designer connects to Figma via OAuth or public design links, unwraps the root canvas artboard, and recursively maps all nested components (navbars, buttons, form inputs, typography, and text content). It then compiles this into a structured 5-part blueprint and downloadable <code>.cursorrules</code> file.
+                  Yes! The blueprint includes strict execution directives, full spatial matrices with exact coordinates (x, y, w, h), exact padding/margin values, and verbatim text copy, instructing the AI developer to replicate the exact design without inventing new layouts.
                 </p>
               </div>
 
               <div className="p-4 sm:p-5 rounded-xl border bg-card">
                 <h3 className="font-semibold text-sm sm:text-base mb-2">
-                  Can I convert screenshots or design images into code prompts?
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Yes. Using Google Gemini 3.5 Flash multimodal vision, Designer inspects high-resolution screenshots to detect spatial boundaries, color palettes, typography, and flex alignments, outputting pixel-accurate Tailwind CSS classes.
-                </p>
-              </div>
-
-              <div className="p-4 sm:p-5 rounded-xl border bg-card">
-                <h3 className="font-semibold text-sm sm:text-base mb-2">
-                  Is Designer by Lavaithan free and open source?
+                  Is Designer free and open-source?
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   Yes, Designer by Lavaithan is completely free and open-source under the MIT license with no sign-up or credit card required.
@@ -237,11 +230,10 @@ export default function HomePage() {
         <section className="border-t bg-muted/50">
           <div className="container mx-auto px-4 py-12 sm:py-20 text-center">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">
-              Ready to Transform Your Workflow?
+              Ready to Turn Screenshots into Pixel-Perfect Code?
             </h2>
             <p className="text-xs sm:text-sm md:text-base text-muted-foreground max-w-xl mx-auto mb-6 sm:mb-8 px-2">
-              Start converting your designs into pixel-perfect IDE prompts
-              today. No sign-up required, completely free and open source.
+              Start converting your screenshots and repos into pixel-accurate IDE prompts today.
             </p>
             <Link href="/dashboard" className="inline-block w-full sm:w-auto max-w-xs sm:max-w-none">
               <Button size="lg" className="w-full sm:w-auto gap-2 h-11">
@@ -256,7 +248,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 text-center text-xs sm:text-sm text-muted-foreground">
           <p className="leading-relaxed">
             Designer by Lavaithan is open source under the MIT License. Built with Next.js,
-            Tailwind CSS, and Gemini 3.5 Flash.
+            Tailwind CSS, and Gemini Multimodal Vision.
           </p>
         </div>
       </footer>
