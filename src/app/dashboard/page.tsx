@@ -409,25 +409,73 @@ export default function DashboardPage() {
                     </TabsList>
 
                     <TabsContent value="upload" className="space-y-3 pt-2">
-                      <div
-                        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                          isDragging
-                            ? "border-primary bg-primary/5"
-                            : "border-muted-foreground/25 hover:border-primary/40 bg-muted/5"
-                        }`}
-                        onClick={() => imageInputRef.current?.click()}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setIsDragging(true);
-                        }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onDrop={handleDrop}
-                      >
-                        <Upload className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-xs font-medium text-foreground">
-                          {imageFile ? imageFile.name : "Drop screenshot or click to browse"}
-                        </p>
-                      </div>
+                      {imagePreviewUrl && imageFile ? (
+                        <div className="p-3 rounded-xl border bg-muted/10 space-y-2.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5 truncate max-w-50">
+                              <FileImage className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span className="font-medium text-foreground truncate">{imageFile.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[11px] text-muted-foreground">
+                                {(imageFile.size / 1024).toFixed(1)} KB
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs text-muted-foreground hover:text-foreground px-2"
+                                onClick={() => imageInputRef.current?.click()}
+                              >
+                                Change
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs text-muted-foreground hover:text-destructive px-1.5"
+                                onClick={() => {
+                                  setImageFile(null);
+                                  if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+                                  setImagePreviewUrl(null);
+                                  setImageUrl("");
+                                  if (imageInputRef.current) imageInputRef.current.value = "";
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="relative rounded-lg border max-h-64 bg-black/5 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={imagePreviewUrl}
+                              alt="Uploaded screenshot"
+                              className="max-h-64 w-auto object-contain rounded"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                            isDragging
+                              ? "border-primary bg-primary/5"
+                              : "border-muted-foreground/25 hover:border-primary/40 bg-muted/5"
+                          }`}
+                          onClick={() => imageInputRef.current?.click()}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDragging(true);
+                          }}
+                          onDragLeave={() => setIsDragging(false)}
+                          onDrop={handleDrop}
+                        >
+                          <Upload className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-xs font-medium text-foreground">
+                            Drop screenshot or click to browse
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            or press <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">Ctrl+V</kbd> to paste
+                          </p>
+                        </div>
+                      )}
                       <input
                         ref={imageInputRef}
                         type="file"
@@ -437,12 +485,47 @@ export default function DashboardPage() {
                       />
                     </TabsContent>
 
-                    <TabsContent value="url" className="space-y-2 pt-2">
+                    <TabsContent value="url" className="space-y-3 pt-2">
+                      {imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:image")) && (
+                        <div className="p-3 rounded-xl border bg-muted/10 space-y-2.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-foreground flex items-center gap-1.5 truncate max-w-50">
+                              <FileImage className="h-3.5 w-3.5 text-primary shrink-0" />
+                              URL Image Preview
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs text-muted-foreground hover:text-destructive px-1.5"
+                              onClick={() => {
+                                setImageUrl("");
+                                setImageFile(null);
+                                if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+                                setImagePreviewUrl(null);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="relative rounded-lg border max-h-64 bg-black/5 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={imageUrl}
+                              alt="URL preview"
+                              className="max-h-64 w-auto object-contain rounded"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       <Input
                         placeholder="https://example.com/screenshot.png"
                         value={imageUrl}
                         onChange={(e) => {
-                          setImageUrl(e.target.value);
+                          const val = e.target.value;
+                          setImageUrl(val);
                           setImageFile(null);
                           if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
                           setImagePreviewUrl(null);
@@ -452,37 +535,6 @@ export default function DashboardPage() {
                       />
                     </TabsContent>
                   </Tabs>
-
-                  {imagePreviewUrl && (
-                    <div className="p-2.5 rounded-lg border bg-muted/10 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium text-muted-foreground truncate max-w-50">
-                          {imageFile?.name || "Image Preview"}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs text-muted-foreground hover:text-destructive px-1.5"
-                          onClick={() => {
-                            setImageFile(null);
-                            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-                            setImagePreviewUrl(null);
-                            setImageUrl("");
-                            if (imageInputRef.current) imageInputRef.current.value = "";
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="relative rounded border max-h-52 bg-black/5 flex items-center justify-center overflow-hidden">
-                        <img
-                          src={imagePreviewUrl}
-                          alt="Preview"
-                          className="max-h-52 w-auto object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
 
                   <Button
                     className="w-full h-10 text-xs font-semibold"
