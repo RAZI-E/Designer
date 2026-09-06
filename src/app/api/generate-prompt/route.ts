@@ -1,15 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { compileBlueprint } from "@/lib/compiler";
+import { compileBlueprint, compileBlueprintToMarkdown } from "@/lib/compiler";
 import type { SpecDocument } from "@/lib/types/spatial";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { specDocument } = body as { specDocument: SpecDocument };
+    const { specDocument, ast } = body as { specDocument?: SpecDocument; ast?: any };
+
+    if (ast) {
+      const fullBlueprint = compileBlueprintToMarkdown(ast);
+      return NextResponse.json({
+        fullBlueprint,
+        ast,
+        viewportSetup: `# Global Tokens & Canvas Setup\n- Background: ${ast.theme?.backgroundBaseHex}\n- Font: ${ast.typography?.suggestedGoogleFontHeading}\n- Primary Accent: ${ast.theme?.primaryAccentHex}`,
+        spatialMatrix: `# Component Matrix\n` + (ast.components || []).map((c: any) => `- [${c.type}] (${c.morphology}): "${c.exactContent}" -> ${c.cssClassesTailwind}`).join("\n"),
+        microEffects: `# Background Art & Shaders\n` + (ast.backgroundArtAndDecorations || []).map((b: any) => `- ${b.name}: ${b.renderingStrategy} (Colors: ${b.colorPalette?.join(", ")})`).join("\n"),
+        responsiveRules: `# Strict Execution Guardrails\n1. ZERO INVENTED STYLES\n2. MORPHOLOGY ADHERENCE\n3. ART & ASSET ACCURACY\n4. EXACT COPY PRESERVATION`,
+        codeGenerationSteps: fullBlueprint,
+        chunks: [
+          {
+            title: "Verbatim Execution Blueprint",
+            content: fullBlueprint,
+            tokenEstimate: Math.ceil(fullBlueprint.length / 4),
+          }
+        ],
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          totalChunks: 1,
+          totalTokens: Math.ceil(fullBlueprint.length / 4),
+        },
+      });
+    }
 
     if (!specDocument) {
       return NextResponse.json(
-        { error: "SpecDocument is required" },
+        { error: "SpecDocument or AST is required" },
         { status: 400 }
       );
     }

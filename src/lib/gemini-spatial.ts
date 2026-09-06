@@ -96,6 +96,8 @@ export const elementSpatialSchema = {
           type: "object",
           properties: {
             boxShadow: { type: "string" },
+            innerGlow: { type: "string" },
+            textGlow: { type: "string" },
             glow: {
               type: "object",
               properties: {
@@ -107,6 +109,14 @@ export const elementSpatialSchema = {
               required: ["spread", "blur", "color", "tailwindClass"],
             },
             backdropBlur: { type: "string" },
+            glassmorphism: {
+              type: "object",
+              properties: {
+                backdropBlur: { type: "string" },
+                borderColor: { type: "string" },
+                backgroundColor: { type: "string" },
+              },
+            },
             opacity: { type: "number" },
           },
           required: ["opacity"],
@@ -136,6 +146,7 @@ export const elementSpatialSchema = {
             transform: { type: "string" },
             backgroundColor: { type: "string" },
             glow: { type: "string" },
+            elevation: { type: "string" },
             cursor: { type: "string", enum: ["pointer", "default"] },
             transitionDurationMs: { type: "number" },
           },
@@ -169,10 +180,45 @@ export const extractionResponseSchema = {
     globalTokens: {
       type: "object",
       properties: {
+        themeMode: { type: "string", enum: ["dark", "light"] },
+        canvasBackground: { type: "string" },
         colors: { type: "object" },
         fonts: { type: "object" },
         shadows: { type: "array", items: { type: "string" } },
         gradients: { type: "array", items: { type: "string" } },
+        gridShader: {
+          type: "object",
+          properties: {
+            enabled: { type: "boolean" },
+            intervalPx: { type: "number" },
+            lineColor: { type: "string" },
+            lineOpacity: { type: "number" },
+            cssPattern: { type: "string" },
+          },
+        },
+        ambientLayers: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string", enum: ["glow_orb", "wireframe_sphere", "mesh_gradient", "custom"] },
+              description: { type: "string" },
+              coordinates: {
+                type: "object",
+                properties: {
+                  x: { type: "string" },
+                  y: { type: "string" },
+                  width: { type: "string" },
+                  height: { type: "string" },
+                },
+                required: ["x", "y", "width", "height"],
+              },
+              effect: { type: "string" },
+              color: { type: "string" },
+            },
+            required: ["type", "description", "coordinates", "effect", "color"],
+          },
+        },
       },
       required: ["colors", "fonts", "shadows", "gradients"],
     },
@@ -181,46 +227,38 @@ export const extractionResponseSchema = {
 };
 
 export function buildExtractionPrompt(): string {
-  return `You are a Principal Computer Vision Spatial Engineer and Senior UI Architect specializing in pixel-faithful design extraction.
+  return `You are a Principal Computer Vision Spatial Engineer and Senior UI Systems Architect specializing in Pixel-Accurate Geometric and Shader Reconstruction.
 
-Analyze this design image and extract EVERY visible element, container, navbar, button, badge, input, card, and typography node with exact mathematical precision.
+Analyze this design image and perform a complete mathematical, spatial, color-space, and shader extraction. You MUST NOT summarize content (e.g. do not just say "A header with login button"). You must execute an exhaustive, pixel-accurate geometric decomposition.
 
-## Critical Instructions for Extraction:
-1. **EXACT TEXT CONTENT EXTRACTION (MANDATORY)**:
-   - For every text element, button label, badge, heading, paragraph, menu item, icon label, or input placeholder, you MUST extract the EXACT visible text in the \`textContent\` property.
-   - Do NOT omit text content or use placeholders like "Lorem ipsum". Extract the real words visible in the image.
+### Mandatory Extraction Protocol:
 
-2. **COMPONENT IDENTIFICATION**:
-   - Set \`componentType\` accurately: "Navbar", "Hero Section", "Primary Button", "Secondary Button", "Search Input", "Feature Card", "Pricing Card", "Badge / Tag", "Heading (H1/H2)", "Body Text", "Footer", "Avatar", etc.
+1. **Strict Geometric AST & Layout Hierarchy:**
+   - Detect every single container, navbar, button, badge, input, heading, subheader, card, and layout section.
+   - For every node, calculate exact coordinates (x, y, width, height) relative to the 1920x1080 canvas.
+   - Calculate viewport percentages (top%, left%, width%, height%), exact padding [T,R,B,L], margin [T,R,B,L], and gap between children.
+   - Map alignment (justify, align) and positionMode ("flex", "grid", "fixed", "absolute", "sticky").
 
-3. **DESKTOP LAYOUT (16:9 ratio, base 1920x1080)**:
-   - **coordinates**: Exact pixel bounds (x, y, width, height) relative to the 1920x1080 canvas.
-   - **viewportPercentage**: top%, left%, width%, height% for responsive behavior.
-   - **positionMode**: "flex", "grid", "fixed", "absolute", or "sticky".
-   - **margins and padding**: [top, right, bottom, left] in px.
-   - **gap**: Gap between children in px.
-   - **alignment**: justify and align values ("start", "center", "end", "between", "around", "stretch").
-   - **zIndex**: If elements overlay each other.
+2. **Color Space & Global Theme Mapping:**
+   - Extract the exact canvas/page background color (e.g., deep dark theme \`#0F172A\` or \`#09090B\`, or light theme).
+   - Set \`themeMode\` to "dark" or "light".
+   - Extract the full color palette into semantic tokens (e.g., background, primary glow, secondary accent, border, muted text, foreground).
 
-4. **MOBILE LAYOUT (9:16 ratio, base 390x844)**:
-   - **stackDirection**: "row" or "col" (desktop rows typically collapse to "col").
-   - **margins and padding**: Proportional mobile padding/margin in px.
-   - **visibility**: "visible", "hidden", "drawer", or "accordion".
+3. **Shaders, Shaders Patterns & Ambient Background Layers:**
+   - **Background Grid Shader:** If grid lines / dot matrices are visible in the background, extract \`gridShader\` with intervalPx (e.g., 40), lineColor (e.g., \`#1E293B\` or \`rgba(255,255,255,0.03)\`), and the exact CSS linear-gradient pattern.
+   - **Ambient Glow Orbs & Wireframes:** If ambient 3D spheres, wireframe meshes, or glowing color orbs are present (e.g., orange wireframe sphere at x:20%, y:10%, w:400px), extract them in \`ambientLayers\` with coordinates, effect (e.g. \`drop-shadow(0 0 80px rgba(249, 115, 22, 0.5))\`), and color.
+   - **Glassmorphism:** For glass cards/buttons (e.g., central 'Thesis' buttons or nav items), detect \`backdropBlur\` (e.g. \`backdrop-blur-md\`), semi-transparent background (e.g. \`rgba(255,255,255,0.05)\`), and subtle border (e.g. \`1px solid rgba(255,255,255,0.1)\`).
+   - **Inner Glow / Shader:** For glowing pill buttons, extract custom \`innerGlow\` / \`boxShadow\` strings (e.g., \`inset 0 0 25px -5px rgba(249, 115, 22, 0.4), inset 0 0 10px rgba(249, 115, 22, 0.2)\`).
+   - **Text Glow:** For brand titles (e.g., \`FABRIC™\`) or highlighted texts, extract exact \`textGlow\` / drop-shadow.
 
-5. **STYLING EXTRACTION**:
-   - **backgroundColor**: Full CSS value (hex, rgba, or gradient like "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)").
-   - **borderRadius**: Exact per-corner radii AND closest Tailwind class (e.g. 12px -> "rounded-xl", 9999px -> "rounded-full").
-   - **border**: width, style ("solid", "dashed", "none"), and hex/rgba color.
-   - **boxShadow**: Full CSS box-shadow string (including drop shadows, inner shadows, and outer glows).
-   - **typography**: fontFamily, fontSizePx, fontWeight (400, 500, 600, 700), lineHeightPx, letterSpacing, color, textTransform.
+4. **Verbatim Text Copy Extraction (MANDATORY):**
+   - In \`textContent\`, extract the EXACT visible words, numbers, trademarks, and symbols without summarizing or altering.
 
-6. **MICRO-INTERACTIONS**:
-   - **hoverEffect**: cursor ("pointer"), transitionDurationMs, hover transform, hover backgroundColor, glow.
-   - **activeClickEffect**: active transform (e.g. "scale(0.98)").
+5. **Interactive States:**
+   - Infer hover and active effects: hover elevate, hover glow, background transitions, cursor pointer.
 
-7. **GLOBAL DESIGN TOKENS**:
-   - Collect all unique colors with semantic names (background, foreground, primary, secondary, accent, border, muted).
-   - Collect all fonts, shadows, and gradients.`;
+6. **Responsive Rules (Desktop to Mobile 9:16):**
+   - Define exact collapse rules: horizontal flex rows collapse into vertical stacks (\`flex-col\`), gap values scale by 50-60%.`;
 }
 
 export function normalizeToDesktop(

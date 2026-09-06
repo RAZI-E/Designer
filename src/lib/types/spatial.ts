@@ -54,10 +54,19 @@ export interface Glow {
   tailwindClass: string;
 }
 
+export interface GlassmorphismConfig {
+  backdropBlur: string;
+  borderColor: string;
+  backgroundColor: string;
+}
+
 export interface Effects {
   boxShadow?: string;
+  innerGlow?: string;
+  textGlow?: string;
   glow?: Glow;
   backdropBlur?: string;
+  glassmorphism?: GlassmorphismConfig;
   opacity: number;
 }
 
@@ -75,6 +84,7 @@ export interface HoverEffect {
   transform?: string;
   backgroundColor?: string;
   glow?: string;
+  elevation?: string;
   cursor: "pointer" | "default";
   transitionDurationMs: number;
 }
@@ -115,6 +125,22 @@ export interface ElementSpatialNode {
   children?: ElementSpatialNode[];
 }
 
+export interface GridShaderConfig {
+  enabled: boolean;
+  intervalPx?: number;
+  lineColor?: string;
+  lineOpacity?: number;
+  cssPattern?: string;
+}
+
+export interface AmbientLayerConfig {
+  type: "glow_orb" | "wireframe_sphere" | "mesh_gradient" | "custom";
+  description: string;
+  coordinates: { x: string; y: string; width: string; height: string };
+  effect: string;
+  color: string;
+}
+
 export interface DesignExtractionResult {
   elements: ElementSpatialNode[];
   globalTokens: {
@@ -122,6 +148,10 @@ export interface DesignExtractionResult {
     fonts: Record<string, string>;
     shadows: string[];
     gradients: string[];
+    themeMode?: "dark" | "light";
+    canvasBackground?: string;
+    gridShader?: GridShaderConfig;
+    ambientLayers?: AmbientLayerConfig[];
   };
   metadata?: {
     canvasWidth: number;

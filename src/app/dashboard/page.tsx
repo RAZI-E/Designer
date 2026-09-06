@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [step, setStep] = useState<ProcessingStep>("idle");
   const [progress, setProgress] = useState(0);
   const [specDocument, setSpecDocument] = useState<SpecDocument | null>(null);
+  const [astData, setAstData] = useState<any | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState<GeneratedPrompt | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +117,7 @@ export default function DashboardPage() {
     setStep("idle");
     setProgress(0);
     setSpecDocument(null);
+    setAstData(null);
     setGeneratedPrompt(null);
     setError(null);
   }, [stopProgressAnimation, imagePreviewUrl]);
@@ -239,6 +241,26 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
+
+      if (data.ast) {
+        setAstData(data.ast);
+        setStep("generating");
+        startProgressAnimation(88, 180);
+
+        const promptResponse = await fetch("/api/generate-prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ast: data.ast }),
+        });
+
+        if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
+        const promptData = await promptResponse.json();
+        setGeneratedPrompt(promptData);
+        stopProgressAnimation();
+        setProgress(100);
+        setTimeout(() => setStep("complete"), 250);
+        return;
+      }
 
       const doc: SpecDocument = {
         source: "vision",
@@ -722,37 +744,114 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border shadow-sm">
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-sm font-semibold">
-                      Extracted Elements ({specDocument?.metadata.totalElements})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                      {specDocument?.extraction.elements.map((el) => (
-                        <div
-                          key={el.id}
-                          className="flex items-center justify-between p-1.5 rounded border text-xs bg-muted/5"
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0 font-normal">
-                              {el.semanticTag}
-                            </Badge>
-                            <span className="truncate font-medium">{el.name}</span>
-                          </div>
-                          <span className="text-[10px] text-muted-foreground font-mono shrink-0">
-                            {el.layout.desktop_16_9.coordinates.width}x{el.layout.desktop_16_9.coordinates.height}
-                          </span>
+                {astData ? (
+                  <Card className="border shadow-sm">
+                    <CardHeader className="py-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold">
+                          Deconstructed Components ({astData.components?.length || 0})
+                        </CardTitle>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block w-3.5 h-3.5 rounded-full border shadow-xs"
+                            style={{ backgroundColor: astData.theme?.backgroundBaseHex }}
+                            title={`Base: ${astData.theme?.backgroundBaseHex}`}
+                          />
+                          <span
+                            className="inline-block w-3.5 h-3.5 rounded-full border shadow-xs"
+                            style={{ backgroundColor: astData.theme?.primaryAccentHex }}
+                            title={`Accent: ${astData.theme?.primaryAccentHex}`}
+                          />
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                            {astData.typography?.suggestedGoogleFontHeading || "Heading"}
+                          </Badge>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-2">
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        {astData.components?.map((c: any, idx: number) => (
+                          <div
+                            key={c.id || idx}
+                            className="p-2 rounded border text-xs bg-muted/5 space-y-1"
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
+                                  {c.type}
+                                </Badge>
+                                <span className="text-[11px] text-muted-foreground italic truncate">
+                                  {c.morphology}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                                {c.placement?.alignment || "layout"}
+                              </span>
+                            </div>
+                            {c.exactContent && (
+                              <p className="text-[11px] text-foreground font-medium truncate">
+                                &quot;{c.exactContent}&quot;
+                              </p>
+                            )}
+                            <p className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded truncate">
+                              {c.cssClassesTailwind}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {astData.backgroundArtAndDecorations && astData.backgroundArtAndDecorations.length > 0 && (
+                        <div className="pt-2 border-t space-y-1.5">
+                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            3D / Background Layers ({astData.backgroundArtAndDecorations.length})
+                          </p>
+                          <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                            {astData.backgroundArtAndDecorations.map((art: any, i: number) => (
+                              <div key={i} className="text-xs p-1.5 rounded border bg-muted/5 flex items-center justify-between">
+                                <span className="font-medium text-[11px] truncate">{art.name}</span>
+                                <Badge variant="outline" className="text-[9px] px-1 py-0">
+                                  z:{art.coordinates?.zIndex}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : specDocument ? (
+                  <Card className="border shadow-sm">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-sm font-semibold">
+                        Extracted Elements ({specDocument?.metadata.totalElements})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        {specDocument?.extraction.elements.map((el) => (
+                          <div
+                            key={el.id}
+                            className="flex items-center justify-between p-1.5 rounded border text-xs bg-muted/5"
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0 font-normal">
+                                {el.semanticTag}
+                              </Badge>
+                              <span className="truncate font-medium">{el.name}</span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                              {el.layout.desktop_16_9.coordinates.width}x{el.layout.desktop_16_9.coordinates.height}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
               </>
             )}
 
-            {step === "idle" && !specDocument && (
+            {step === "idle" && !specDocument && !astData && (
               <div className="h-full min-h-64 flex flex-col items-center justify-center p-8 text-center rounded-lg border border-dashed text-muted-foreground">
                 <Sparkles className="h-8 w-8 mb-3 opacity-30" />
                 <p className="text-sm font-medium text-foreground mb-1">Ready for input</p>

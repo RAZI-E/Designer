@@ -9,6 +9,98 @@ import type {
 } from "@/lib/types/spatial";
 import { DESKTOP_REFERENCE, MOBILE_REFERENCE } from "@/lib/gemini-spatial";
 
+export function compileBlueprintToMarkdown(ast: any): string {
+  const { theme, typography, backgroundArtAndDecorations, components } = ast || {};
+
+  return `# High-Precision Execution Blueprint (Verbatim Rebuild)
+
+## CRITICAL EXECUTION RULES (STRICT ENFORCEMENT)
+1. ZERO INVENTED STYLES: Do NOT use default component libraries (Shadcn/Bootstrap/Tailwind defaults) unless they match the exact classes specified below.
+2. MORPHOLOGY ADHERENCE: If an item is an "Inline Trigger List", DO NOT wrap it in a card or button box. Keep it borderless with vertical tick dividers as specified.
+3. ART & ASSET ACCURACY: Reconstruct decorative assets (3D meshes, spheres, gradients) using the exact colors and SVG/CSS strategies defined in Section 2. Do not substitute with gray wireframe spheres or stock icons.
+4. TEXT CUTOFFS & WATERMARKS: Watermark elements must retain their huge scale and baseline viewport clipping.
+
+---
+
+## 1. Global Setup & Design Tokens
+
+### Fonts:
+Add these to \`app/layout.tsx\` or your global stylesheet:
+- **Heading Font:** \`${typography?.suggestedGoogleFontHeading || "Inter"}\` (\`${typography?.headerStyle || "normal"}\`)
+- **Body Font:** \`${typography?.suggestedGoogleFontBody || "Inter"}\`
+
+### Canvas & Theme Tokens:
+- **Background Base:** \`${theme?.backgroundBaseHex || "#000000"}\`
+${theme?.hasGradient ? `- **Background Gradient:** \`${theme.gradientCss}\`` : ""}
+${theme?.overlayTexture && theme.overlayTexture !== "none" ? `- **Overlay Texture/Pattern:** \`${theme.overlayTexture}\`` : ""}
+- **Primary Accent:** \`${theme?.primaryAccentHex || "#3b82f6"}\`
+- **Text Primary:** \`${theme?.textPrimaryHex || "#ffffff"}\`
+- **Text Secondary:** \`${theme?.textSecondaryHex || "#a1a1aa"}\`
+
+---
+
+## 2. Background Art, 3D Assets & Ambient Layers
+${(backgroundArtAndDecorations || []).map((art: any, i: number) => `
+### Layer ${i + 1}: ${art.name}
+- **Colors:** ${(art.colorPalette || []).join(", ")}
+- **Positioning:** \`top: ${art.coordinates?.top}\`, \`left: ${art.coordinates?.left}\`, \`width: ${art.coordinates?.width}\`, \`height: ${art.coordinates?.height}\`, \`z-index: ${art.coordinates?.zIndex}\`
+- **Rendering Strategy:** ${art.renderingStrategy}
+`).join("\n")}
+
+---
+
+## 3. Component Matrix & Exact Morphologies
+
+| Component | Target Morphology | Exact Visible Copy | Recommended Tailwind Classes |
+| :--- | :--- | :--- | :--- |
+${(components || []).map((c: any) => `| **${c.type}** | ${c.morphology} | \`${(c.exactContent || "").replace(/\n/g, " ")}\` | \`${c.cssClassesTailwind}\` |`).join("\n")}
+
+---
+
+## 4. Layout Assembly Instructions
+
+Follow this structural assembly order in your main page component:
+
+\`\`\`tsx
+export default function Page() {
+  return (
+    <main className="relative min-h-screen w-full overflow-hidden" style={{ backgroundColor: '${theme?.backgroundBaseHex || "#000000"}' }}>
+      {/* 1. Background Layers & Art */}
+      ${(backgroundArtAndDecorations || []).map((art: any) => `
+      {/* ${art.name} */}
+      <div 
+        className="pointer-events-none absolute"
+        style={{
+          top: '${art.coordinates?.top}',
+          left: '${art.coordinates?.left}',
+          width: '${art.coordinates?.width}',
+          height: '${art.coordinates?.height}',
+          zIndex: ${art.coordinates?.zIndex},
+        }}
+      >
+        {/* Render: ${art.renderingStrategy} */}
+      </div>`).join("\n")}
+
+      {/* 2. Primary UI Components */}
+      <div className="relative z-20 flex flex-col min-h-screen">
+        {/* Inject Header, Hero, and Triggers here using the exact Tailwind classes defined in Section 3 */}
+      </div>
+    </main>
+  );
+}
+\`\`\`
+
+---
+
+## 5. Verification Checklist for Agent
+Before concluding your response:
+- [ ] Confirm typography imports match \`${typography?.suggestedGoogleFontHeading || "Inter"}\`.
+- [ ] Ensure all action triggers match their specific morphology (no unwanted borders or boxed card wrappers).
+- [ ] Verify that background art elements use their exact specified colors (${theme?.primaryAccentHex || "#3b82f6"}) rather than monochromatic placeholders.
+`;
+}
+
+
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
