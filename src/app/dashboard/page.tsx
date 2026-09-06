@@ -635,41 +635,11 @@ export default function DashboardPage() {
               <>
                 <Card>
                   <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <CardTitle className="text-base sm:text-lg">Generated Blueprint</CardTitle>
-                        <CardDescription className="text-xs mt-0.5">
-                          {generatedPrompt.chunks.length} chunks &bull; ~
-                          {generatedPrompt.chunks.reduce((s, c) => s + c.tokenEstimate, 0)} tokens
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 sm:flex-initial h-8 text-xs"
-                          onClick={() => copyToClipboard(generatedPrompt.fullBlueprint)}
-                        >
-                          {copied ? (
-                            <Check className="h-3.5 w-3.5 mr-1 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          {copied ? "Copied" : "Copy"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 sm:flex-initial h-8 text-xs"
-                          onClick={() =>
-                            downloadFile(generatedPrompt.fullBlueprint, "designer-blueprint.md")
-                          }
-                        >
-                          <Download className="h-3.5 w-3.5 mr-1" />
-                          Export
-                        </Button>
-                      </div>
-                    </div>
+                    <CardTitle className="text-base sm:text-lg">Generated Blueprint</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
+                      {generatedPrompt.chunks.length} chunks &bull; ~
+                      {generatedPrompt.chunks.reduce((s, c) => s + c.tokenEstimate, 0)} tokens
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Tabs defaultValue="viewport" className="w-full">
