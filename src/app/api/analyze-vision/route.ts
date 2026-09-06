@@ -114,38 +114,64 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 });
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
+    const candidateModels = [
+      process.env.GEMINI_MODEL,
+      'gemini-3.6-flash',
+      'gemini-3.7-flash',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+    ].filter(Boolean) as string[];
+
+    let response: any = null;
+    let lastError: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents: [
             {
-              inlineData: {
-                data: base64Data,
-                mimeType,
-              },
-            },
-            {
-              text: `You are an elite Computer Vision Frontend Engineer. Deconstruct this design image into a high-precision architectural reproduction schema.
+              role: 'user',
+              parts: [
+                {
+                  inlineData: {
+                    data: base64Data,
+                    mimeType,
+                  },
+                },
+                {
+                  text: `You are an elite Computer Vision Frontend Engineer. Deconstruct this design image into a high-precision architectural reproduction schema.
 DO NOT summarize content or assume generic design defaults.
 Pay intense attention to:
 1. Exact visual nature of 3D objects, meshes, shapes, or background art (colors, glows, line density).
 2. Button morphology: NEVER classify inline text links or divider-separated triggers as standard boxed buttons.
 3. Giant typography running off-screen (watermarks, baseline cutoffs).
 4. Subtle background gradients, grids, and ambient lighting.`
+                }
+              ]
             }
-          ]
-        }
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: designDeconstructionSchema,
-        temperature: 0.1, // Near-zero temperature to eliminate hallucinations
-      }
-    });
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: designDeconstructionSchema,
+            temperature: 0.1, // Near-zero temperature to eliminate hallucinations
+          }
+        });
 
-    const parsedAST = JSON.parse(response.text!);
+        if (response && response.text) {
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`Model ${model} failed, trying fallback:`, err instanceof Error ? err.message : err);
+      }
+    }
+
+    if (!response || !response.text) {
+      throw lastError || new Error('Failed to generate content with available Gemini models');
+    }
+
+    const parsedAST = JSON.parse(response.text);
     return NextResponse.json({ success: true, ast: parsedAST });
   } catch (error: any) {
     console.error('Vision analysis error:', error);
