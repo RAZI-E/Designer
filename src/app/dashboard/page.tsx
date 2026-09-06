@@ -726,25 +726,37 @@ export default function DashboardPage() {
                         />
                       </TabsContent>
                       <TabsContent value="code">
-                        <div className="space-y-3">
-                          <Textarea
-                            readOnly
-                            className="min-h-60 sm:min-h-75 font-mono text-xs leading-relaxed"
-                            value={generatedPrompt.codeGenerationSteps}
-                          />
-                          <Button
-                            variant="outline"
-                            className="w-full text-xs sm:text-sm h-10"
-                            onClick={() =>
-                              downloadFile(generatedPrompt.fullBlueprint, "designer-blueprint.md")
-                            }
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Full Blueprint (.md)
-                          </Button>
-                        </div>
+                        <Textarea
+                          readOnly
+                          className="min-h-75 sm:min-h-100 font-mono text-xs leading-relaxed"
+                          value={generatedPrompt.codeGenerationSteps}
+                        />
                       </TabsContent>
                     </Tabs>
+
+                    <div className="pt-4 mt-4 border-t flex flex-col sm:flex-row gap-2.5">
+                      <Button
+                        className="flex-1 text-xs sm:text-sm h-11 font-semibold shadow-sm gap-2"
+                        onClick={() =>
+                          downloadFile(generatedPrompt.fullBlueprint, "designer-blueprint.md")
+                        }
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Full Blueprint (.md)
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="sm:w-auto text-xs sm:text-sm h-11 px-4 gap-2"
+                        onClick={() => copyToClipboard(generatedPrompt.fullBlueprint)}
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                        {copied ? "Copied to Clipboard" : "Copy Full Prompt"}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
