@@ -49,12 +49,12 @@ export default function HomePage() {
             AI Design to Prompt
           </Badge>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-4 leading-tight">
-            Turn Screenshots into
+            Convert Your Design into
             <br />
-            <span className="text-primary">Pixel-Accurate IDE Prompts</span>
+            <span className="text-primary">Prompt For AI</span>
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
-            Extract exact coordinates, verbatim copy, colors, spacing, and Tailwind CSS tokens from screenshots or GitHub repositories for Cursor, Claude, and Copilot.
+            Extract exact coordinates, verbatim copy, colors, spacing, and Tailwind CSS tokens from screenshots or GitHub repositories for Cursor, Claude, and Copilot. AI will make the design you want
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link href="/dashboard">
