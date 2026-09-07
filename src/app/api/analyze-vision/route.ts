@@ -91,6 +91,31 @@ const designDeconstructionSchema: Schema = {
   required: ["theme", "typography", "backgroundArtAndDecorations", "components"]
 };
 
+function isTransientError(err: any): boolean {
+  if (!err) return false;
+  const status = err.status || err.statusCode || err.code;
+  if (status === 503 || status === 429 || status === 504 || status === 500) return true;
+  const msg = (err.message || String(err)).toLowerCase();
+  return (
+    msg.includes('503') ||
+    msg.includes('high demand') ||
+    msg.includes('unavailable') ||
+    msg.includes('spikes in demand') ||
+    msg.includes('resource_exhausted') ||
+    msg.includes('quota') ||
+    msg.includes('rate limit') ||
+    msg.includes('try again later') ||
+    msg.includes('temporarily') ||
+    msg.includes('fetch failed') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout')
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -114,67 +139,117 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 });
     }
 
-    const candidateModels = [
+    // Active, verified vision-capable Gemini models in order of preference
+    const rawCandidateModels = [
       process.env.GEMINI_MODEL,
-      'gemini-3.6-flash',
+      'gemini-3.5-flash',
       'gemini-3.7-flash',
-      'gemini-2.5-flash',
-      'gemini-flash-latest',
+      'gemini-3.6-flash',
+      'gemini-3.8-flash',
+      'gemini-3.5-flash-lite',
     ].filter(Boolean) as string[];
+
+    const candidateModels = Array.from(new Set(rawCandidateModels));
 
     let response: any = null;
     let lastError: any = null;
 
     for (const model of candidateModels) {
-      try {
-        response = await ai.models.generateContent({
-          model,
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  inlineData: {
-                    data: base64Data,
-                    mimeType,
+      const maxRetries = 2;
+      let attempt = 0;
+      let modelSucceeded = false;
+
+      while (attempt <= maxRetries) {
+        try {
+          response = await ai.models.generateContent({
+            model,
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      data: base64Data,
+                      mimeType,
+                    },
                   },
-                },
-                {
-                  text: `You are an elite Computer Vision Frontend Engineer. Deconstruct this design image into a high-precision architectural reproduction schema.
+                  {
+                    text: `You are an elite Computer Vision Frontend Engineer. Deconstruct this design image into a high-precision architectural reproduction schema.
 DO NOT summarize content or assume generic design defaults.
 Pay intense attention to:
 1. Exact visual nature of 3D objects, meshes, shapes, or background art (colors, glows, line density).
 2. Button morphology: NEVER classify inline text links or divider-separated triggers as standard boxed buttons.
 3. Giant typography running off-screen (watermarks, baseline cutoffs).
 4. Subtle background gradients, grids, and ambient lighting.`
-                }
-              ]
+                  }
+                ]
+              }
+            ],
+            config: {
+              responseMimeType: 'application/json',
+              responseSchema: designDeconstructionSchema,
+              temperature: 0.1, // Near-zero temperature to eliminate hallucinations
             }
-          ],
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: designDeconstructionSchema,
-            temperature: 0.1, // Near-zero temperature to eliminate hallucinations
-          }
-        });
+          });
 
-        if (response && response.text) {
-          break;
+          if (response && response.text) {
+            modelSucceeded = true;
+            break;
+          }
+        } catch (err: any) {
+          lastError = err;
+          const isTransient = isTransientError(err);
+          console.warn(`Model ${model} (attempt ${attempt + 1}/${maxRetries + 1}) failed:`, err instanceof Error ? err.message : err);
+
+          if (isTransient && attempt < maxRetries) {
+            // Exponential backoff with random jitter: 800ms, 1600ms + [0-400ms]
+            const delay = Math.pow(2, attempt) * 800 + Math.random() * 400;
+            console.log(`Transient high demand on ${model}. Retrying in ${Math.round(delay)}ms...`);
+            await sleep(delay);
+            attempt++;
+          } else {
+            // Model either permanently failed (e.g. 404) or exhausted retries: cascade to next fallback model
+            break;
+          }
         }
-      } catch (err) {
-        lastError = err;
-        console.warn(`Model ${model} failed, trying fallback:`, err instanceof Error ? err.message : err);
+      }
+
+      if (modelSucceeded) {
+        break;
       }
     }
 
     if (!response || !response.text) {
-      throw lastError || new Error('Failed to generate content with available Gemini models');
+      const isDemandError = isTransientError(lastError);
+      const statusCode = isDemandError ? 503 : 500;
+      const userMessage = isDemandError
+        ? "AI vision models are currently experiencing high global demand. Automatic failover and retries were attempted. Please try again in a few seconds."
+        : (lastError instanceof Error ? lastError.message : 'Failed to analyze image with available Gemini models');
+
+      return NextResponse.json(
+        { 
+          error: userMessage,
+          isTransient: isDemandError,
+        },
+        { status: statusCode }
+      );
     }
 
     const parsedAST = JSON.parse(response.text);
     return NextResponse.json({ success: true, ast: parsedAST });
   } catch (error: any) {
     console.error('Vision analysis error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const isDemandError = isTransientError(error);
+    const userMessage = isDemandError
+      ? "AI vision models are currently experiencing high global demand. Please try again in a moment."
+      : (error instanceof Error ? error.message : "Internal server error");
+
+    return NextResponse.json(
+      { 
+        error: userMessage,
+        isTransient: isDemandError 
+      }, 
+      { status: isDemandError ? 503 : 500 }
+    );
   }
 }

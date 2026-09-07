@@ -24,6 +24,8 @@ import {
   Camera,
   Clipboard,
   Trash2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -48,7 +50,34 @@ export default function DashboardPage() {
   const [generatedPrompt, setGeneratedPrompt] = useState<GeneratedPrompt | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryStatus, setRetryStatus] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const cleanErrorMessage = (err: any): string => {
+    if (!err) return "An unexpected error occurred.";
+    const raw = typeof err === "string" ? err : err.message || JSON.stringify(err);
+    if (
+      raw.includes("503") ||
+      raw.includes("high demand") ||
+      raw.includes("UNAVAILABLE") ||
+      raw.includes("spikes in demand") ||
+      raw.includes("temporarily unavailable")
+    ) {
+      return "Google Gemini is currently experiencing a high demand spike. All fallback models were attempted. Please click 'Retry Analysis' in a few seconds.";
+    }
+    if (raw.includes("429") || raw.includes("RESOURCE_EXHAUSTED") || raw.includes("quota") || raw.includes("rate limit")) {
+      return "API rate limit reached. Please wait a few seconds and click 'Retry Analysis'.";
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.error) {
+        return typeof parsed.error === "string" ? parsed.error : parsed.error.message || raw;
+      }
+    } catch {
+      // ignore
+    }
+    return raw;
+  };
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -220,6 +249,7 @@ export default function DashboardPage() {
     setStep("extracting");
     setProgress(4);
     setError(null);
+    setRetryStatus(null);
     startProgressAnimation(48, 220);
 
     try {
@@ -230,14 +260,26 @@ export default function DashboardPage() {
         formData.append("imageUrl", imageUrl);
       }
 
-      const response = await fetch("/api/analyze-vision", {
+      let response = await fetch("/api/analyze-vision", {
         method: "POST",
         body: formData,
       });
 
+      // If server returns 503 or 429, attempt one fast automatic client retry after short delay
+      if (!response.ok && (response.status === 503 || response.status === 429)) {
+        setRetryStatus("High model traffic detected. Auto-retrying with fallback in 2s...");
+        await new Promise((r) => setTimeout(r, 2200));
+        setRetryStatus("Retrying analysis now...");
+        response = await fetch("/api/analyze-vision", {
+          method: "POST",
+          body: formData,
+        });
+      }
+      setRetryStatus(null);
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to analyze image");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to analyze image (status ${response.status})`);
       }
 
       const data = await response.json();
@@ -295,7 +337,8 @@ export default function DashboardPage() {
       setTimeout(() => setStep("complete"), 250);
     } catch (err) {
       stopProgressAnimation();
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setRetryStatus(null);
+      setError(cleanErrorMessage(err));
       setStep("idle");
       setProgress(0);
     }
@@ -626,7 +669,7 @@ export default function DashboardPage() {
 
             {isProcessing && (
               <Card>
-                <CardContent className="py-4">
+                <CardContent className="py-4 space-y-2">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">
@@ -636,14 +679,46 @@ export default function DashboardPage() {
                     </div>
                     <Progress value={progress} className="h-1.5" />
                   </div>
+                  {retryStatus && (
+                    <div className="flex items-center gap-2 text-[11px] text-amber-500 bg-amber-500/10 px-2.5 py-1.5 rounded-md border border-amber-500/20">
+                      <RefreshCw className="h-3 w-3 animate-spin shrink-0" />
+                      <span>{retryStatus}</span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
             {error && (
-              <Card className="border-destructive">
-                <CardContent className="py-3">
-                  <p className="text-xs text-destructive">{error}</p>
+              <Card className="border-destructive/40 bg-destructive/5 shadow-sm">
+                <CardContent className="py-3.5 px-4 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <div className="space-y-1 flex-1">
+                      <p className="text-xs font-semibold text-destructive">
+                        {error.includes("demand") || error.includes("Gemini") || error.includes("traffic")
+                          ? "Temporary Model Demand Spike"
+                          : "Analysis Error"}
+                      </p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {error}
+                      </p>
+                    </div>
+                  </div>
+                  {(imageFile || imageUrl) && (
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive hover:text-destructive"
+                        onClick={handleVisionAnalyze}
+                        disabled={isProcessing}
+                      >
+                        <RefreshCw className={`h-3 w-3 ${isProcessing ? "animate-spin" : ""}`} />
+                        Retry Analysis
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
