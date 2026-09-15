@@ -5,10 +5,14 @@ import type { SpecDocument } from "@/lib/types/spatial";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { specDocument, ast } = body as { specDocument?: SpecDocument; ast?: any };
+    const { specDocument, ast, userAssetResponses } = body as { 
+      specDocument?: SpecDocument; 
+      ast?: any; 
+      userAssetResponses?: Record<string, { preference: string; customUrl?: string; videoDetails?: string }>;
+    };
 
     if (ast) {
-      const fullBlueprint = compileBlueprintToMarkdown(ast);
+      const fullBlueprint = compileBlueprintToMarkdown(ast, userAssetResponses);
       return NextResponse.json({
         fullBlueprint,
         ast,

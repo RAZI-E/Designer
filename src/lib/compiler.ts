@@ -9,20 +9,95 @@ import type {
 } from "@/lib/types/spatial";
 import { DESKTOP_REFERENCE, MOBILE_REFERENCE } from "@/lib/gemini-spatial";
 
-export function compileBlueprintToMarkdown(ast: any): string {
-  const { theme, typography, backgroundArtAndDecorations, components } = ast || {};
+export function compileBlueprintToMarkdown(
+  ast: any,
+  userAssetResponses?: Record<string, { preference: string; customUrl?: string; videoDetails?: string }>
+): string {
+  const { theme, typography, backgroundArtAndDecorations, components, mediaAssets, layoutStructure } = ast || {};
 
-  return `# High-Precision Execution Blueprint (Verbatim Rebuild)
+  // 1. Process Pre-flight Asset Protocols
+  let assetDirectives = "";
+  const detectedMedia = mediaAssets || [];
+  const generalVideo = userAssetResponses?.__general_video;
 
-## CRITICAL EXECUTION RULES (STRICT ENFORCEMENT)
-1. ZERO INVENTED STYLES: Do NOT use default component libraries (Shadcn/Bootstrap/Tailwind defaults) unless they match the exact classes specified below.
-2. MORPHOLOGY ADHERENCE: If an item is an "Inline Trigger List", DO NOT wrap it in a card or button box. Keep it borderless with vertical tick dividers as specified.
-3. ART & ASSET ACCURACY: Reconstruct decorative assets (3D meshes, spheres, gradients) using the exact colors and SVG/CSS strategies defined in Section 2. Do not substitute with gray wireframe spheres or stock icons.
-4. TEXT CUTOFFS & WATERMARKS: Watermark elements must retain their huge scale and baseline viewport clipping.
+  if (detectedMedia.length > 0 || generalVideo?.preference === "yes") {
+    assetDirectives += `## 0. Pre-Flight Asset & Media Protocol (MANDATORY AI/IDE ACTION)\n\n`;
+    assetDirectives += `> 🛑 **CRITICAL DIRECTIVE FOR THE DEVELOPER / AI ASSISTANT**:\n`;
+    assetDirectives += `> This design relies on specific visual assets (images, 3D renders, video, or avatars). DO NOT use broken img tags or arbitrary generic placeholders.\n\n`;
+
+    if (generalVideo?.preference === "yes") {
+      assetDirectives += `### 🎬 Video / Animation Requirement:\n`;
+      assetDirectives += `- **Video Details:** ${generalVideo.videoDetails || "Embedded video / motion player"}\n`;
+      assetDirectives += `- **Instruction for AI/IDE:** Before finalizing code, ask the developer: *"Please provide the video file path or embed URL (e.g., YouTube/Vimeo embed or /public/video.mp4) to insert into the media container."*\n\n`;
+    }
+
+    if (detectedMedia.length > 0) {
+      assetDirectives += `### 🖼️ Required Media Assets Inventory:\n\n`;
+      assetDirectives += `| Asset ID | Type | Title & Location | Required Action / Path |\n`;
+      assetDirectives += `|---|---|---|---|\n`;
+
+      for (const asset of detectedMedia) {
+        const userResp = userAssetResponses?.[asset.id];
+        let actionStr = "";
+
+        if (userResp?.preference === "provide" && userResp.customUrl) {
+          actionStr = `Use provided asset path: \`${userResp.customUrl}\``;
+        } else if (userResp?.preference === "svg_placeholder") {
+          actionStr = `Generate an inline CSS/SVG geometric illustration approximation`;
+        } else {
+          // Default: tell IDE to ask developer
+          actionStr = `**PROMPT DEVELOPER**: Ask for file \`/public/${asset.suggestedFilename}\` (${asset.title})`;
+        }
+
+        assetDirectives += `| \`${asset.id}\` | \`${asset.type}\` | **${asset.title}** (${asset.location}) | ${actionStr} |\n`;
+      }
+      assetDirectives += `\n`;
+
+      assetDirectives += `#### Developer Chat Inquiries to Output:\n`;
+      for (const asset of detectedMedia) {
+        const userResp = userAssetResponses?.[asset.id];
+        if (userResp?.preference !== "provide" && userResp?.preference !== "svg_placeholder") {
+          assetDirectives += `- [ ] Ask developer: *"${asset.questionForUser || `Do you have the asset file for ${asset.title}?`}"* (Save to \`public/${asset.suggestedFilename}\`)\n`;
+        }
+      }
+      assetDirectives += `\n---\n\n`;
+    }
+  }
+
+  // 2. Build Component Sub-element Details
+  let componentDetails = "";
+  for (const c of components || []) {
+    componentDetails += `### Component: ${c.type} (\`${c.id}\`)\n`;
+    componentDetails += `- **Morphology:** ${c.morphology}\n`;
+    componentDetails += `- **Placement:** ${c.placement?.alignment || "flow"} (Box: \`${c.placement?.box || "auto"}\`)\n`;
+    componentDetails += `- **Main Tailwind Classes:** \`${c.cssClassesTailwind}\`\n`;
+
+    if (c.subElements && c.subElements.length > 0) {
+      componentDetails += `- **Internal Sub-Elements Hierarchy:**\n`;
+      for (const sub of c.subElements) {
+        componentDetails += `  - \`[${sub.role}]\`: "${sub.content}" -> \`${sub.cssClassesTailwind}\`\n`;
+      }
+    } else {
+      componentDetails += `- **Exact Visible Content:** \`${(c.exactContent || "").replace(/\n/g, " ")}\`\n`;
+    }
+    componentDetails += `\n`;
+  }
+
+  // 3. Assemble Complete Ready-to-Run Next.js Page JSX
+  const jsxCode = generateExecutableJsx(ast, userAssetResponses);
+
+  return `# High-Precision Execution Blueprint (Pixel-Faithful Rebuild)
+
+> 🎯 **DIRECTIVE FOR AI / IDE (Cursor, Claude Code, Copilot, v0, Windsurf)**:
+> You are an autonomous frontend reproduction engine. You are implementing an uncompromising, pixel-faithful 1:1 clone of the design specification below.
+> - **ZERO INVENTED STYLES**: Do NOT substitute custom designs with generic template libraries (Shadcn/Chakra/Bootstrap defaults) unless they match the exact classes specified.
+> - **VERBATIM COPY**: Preserve all visible text, numbers, trademarks, and symbols exactly as given.
+> - **STRICT MORPHOLOGY**: Maintain exact button geometries (pills, glassmorphism, vertical divider ticks, outline buttons).
+> - **COMPLETE PRODUCTION CODE**: Output full, fully-implemented components without skipping or truncating with \`// TODO\`.
 
 ---
 
-## 1. Global Setup & Design Tokens
+${assetDirectives}## 1. Global Setup & Design Tokens
 
 ### Fonts:
 Add these to \`app/layout.tsx\` or your global stylesheet:
@@ -40,32 +115,71 @@ ${theme?.overlayTexture && theme.overlayTexture !== "none" ? `- **Overlay Textur
 ---
 
 ## 2. Background Art, 3D Assets & Ambient Layers
-${(backgroundArtAndDecorations || []).map((art: any, i: number) => `
+${(backgroundArtAndDecorations && backgroundArtAndDecorations.length > 0)
+  ? backgroundArtAndDecorations.map((art: any, i: number) => `
 ### Layer ${i + 1}: ${art.name}
 - **Colors:** ${(art.colorPalette || []).join(", ")}
 - **Positioning:** \`top: ${art.coordinates?.top}\`, \`left: ${art.coordinates?.left}\`, \`width: ${art.coordinates?.width}\`, \`height: ${art.coordinates?.height}\`, \`z-index: ${art.coordinates?.zIndex}\`
 - **Rendering Strategy:** ${art.renderingStrategy}
-`).join("\n")}
+`).join("\n")
+  : "_No ambient background shaders required. Flat canvas background._\n"}
 
 ---
 
-## 3. Component Matrix & Exact Morphologies
+## 3. Component Matrix & Deconstructed Sub-Elements
 
 | Component | Target Morphology | Exact Visible Copy | Recommended Tailwind Classes |
 | :--- | :--- | :--- | :--- |
-${(components || []).map((c: any) => `| **${c.type}** | ${c.morphology} | \`${(c.exactContent || "").replace(/\n/g, " ")}\` | \`${c.cssClassesTailwind}\` |`).join("\n")}
+${(components || []).map((c: any) => `| **${c.type}** | ${c.morphology} | \`${(c.exactContent || "").replace(/\n/g, " ").slice(0, 80)}${c.exactContent && c.exactContent.length > 80 ? "..." : ""}\` | \`${c.cssClassesTailwind}\` |`).join("\n")}
+
+### Detailed Component Specifications:
+${componentDetails}
+---
+
+## 4. Complete Executable Next.js Page Component
+
+Use this complete, structured React / Next.js component to assemble the exact page without missing child elements:
+
+\`\`\`tsx
+${jsxCode}
+\`\`\`
 
 ---
 
-## 4. Layout Assembly Instructions
+## 5. Verification Checklist for Agent
+Before concluding your response, verify:
+- [ ] Typography imports match \`${typography?.suggestedGoogleFontHeading || "Inter"}\` with appropriate weights and font-serif/font-sans classes.
+- [ ] All media assets (${(detectedMedia || []).map((m: any) => m.title).join(", ") || "none"}) have appropriate image containers, aspect ratios, or developer prompts.
+- [ ] All action triggers match their specific morphology (no unwanted borders or boxed card wrappers around inline links).
+- [ ] Background color is precisely \`${theme?.backgroundBaseHex || "#000000"}\`.
+- [ ] Exact visible copy is preserved verbatim with zero omissions.
+`;
+}
 
-Follow this structural assembly order in your main page component:
+function generateExecutableJsx(ast: any, userAssetResponses?: any): string {
+  const { theme, typography, components, mediaAssets, backgroundArtAndDecorations, layoutStructure } = ast || {};
+  const isSerifHeading = (typography?.suggestedGoogleFontHeading || "").toLowerCase().includes("playfair") ||
+    (typography?.headerStyle || "").toLowerCase().includes("serif");
 
-\`\`\`tsx
+  const bgBase = theme?.backgroundBaseHex || "#000000";
+
+  // Build JSX
+  return `"use client";
+
+import React, { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Search, ChevronDown, Check, ArrowRight, Sparkles } from "lucide-react";
+
 export default function Page() {
+  const [searchQuery, setSearchQuery] = useState("");
+
   return (
-    <main className="relative min-h-screen w-full overflow-hidden" style={{ backgroundColor: '${theme?.backgroundBaseHex || "#000000"}' }}>
-      {/* 1. Background Layers & Art */}
+    <main 
+      className="relative min-h-screen w-full flex flex-col items-center overflow-x-hidden selection:bg-neutral-800 selection:text-white"
+      style={{ backgroundColor: '${bgBase}' }}
+    >
+      {/* 1. Ambient Background Decor & Overlays */}
       ${(backgroundArtAndDecorations || []).map((art: any) => `
       {/* ${art.name} */}
       <div 
@@ -75,29 +189,225 @@ export default function Page() {
           left: '${art.coordinates?.left}',
           width: '${art.coordinates?.width}',
           height: '${art.coordinates?.height}',
-          zIndex: ${art.coordinates?.zIndex},
+          zIndex: ${art.coordinates?.zIndex || 0},
         }}
       >
-        {/* Render: ${art.renderingStrategy} */}
-      </div>`).join("\n")}
+        {/* ${art.renderingStrategy} */}
+      </div>`).join("\n      ")}
 
-      {/* 2. Primary UI Components */}
-      <div className="relative z-20 flex flex-col min-h-screen">
-        {/* Inject Header, Hero, and Triggers here using the exact Tailwind classes defined in Section 3 */}
+      {/* 2. Page Structure & Components */}
+      <div className="relative z-10 w-full flex flex-col items-center">
+        ${renderSectionsOrComponents(ast, userAssetResponses)}
       </div>
     </main>
   );
+}`;
 }
-\`\`\`
 
----
+function renderSectionsOrComponents(ast: any, userAssetResponses?: any): string {
+  const { components, mediaAssets, layoutStructure } = ast || {};
+  const compList = components || [];
+  const mediaList = mediaAssets || [];
 
-## 5. Verification Checklist for Agent
-Before concluding your response:
-- [ ] Confirm typography imports match \`${typography?.suggestedGoogleFontHeading || "Inter"}\`.
-- [ ] Ensure all action triggers match their specific morphology (no unwanted borders or boxed card wrappers).
-- [ ] Verify that background art elements use their exact specified colors (${theme?.primaryAccentHex || "#3b82f6"}) rather than monochromatic placeholders.
-`;
+  // If layoutStructure exists, use sections
+  if (layoutStructure?.sections && layoutStructure.sections.length > 0) {
+    return layoutStructure.sections.map((sec: any) => {
+      const Tag = sec.tag || "section";
+      const matchingComps = compList.filter((c: any) => sec.componentIds?.includes(c.id));
+      const secNameLower = (sec.name || "").toLowerCase();
+      const matchingMedia = mediaList.filter((m: any) => 
+        (sec.componentIds?.includes(m.id) || 
+        secNameLower.includes("media") || 
+        secNameLower.includes("showcase") || 
+        secNameLower.includes("banner")) &&
+        m.type !== "avatar" &&
+        m.type !== "icon"
+      );
+
+      let innerJsx = matchingComps.map((c: any) => renderIndividualComponentJsx(c, mediaList, userAssetResponses)).join("\n          ");
+
+      // If this is a media section or has no component matches, render the matching media assets
+      if (matchingMedia.length > 0 && (matchingComps.length === 0 || secNameLower.includes("media") || secNameLower.includes("banner"))) {
+        const mediaJsx = matchingMedia.map((m: any) => renderIndividualMediaJsx(m, userAssetResponses)).join("\n          ");
+        innerJsx = innerJsx ? `${innerJsx}\n          ${mediaJsx}` : mediaJsx;
+      }
+      
+      return `
+        {/* Section: ${sec.name} */}
+        <${Tag} className="${sec.containerClassesTailwind}">
+          ${innerJsx}
+        </${Tag}>`;
+    }).join("\n");
+  }
+
+  // Otherwise, render top-down based on component types
+  return compList.map((c: any) => renderIndividualComponentJsx(c, mediaList, userAssetResponses)).join("\n        ");
+}
+
+function renderIndividualMediaJsx(m: any, userAssetResponses?: any): string {
+  const userResp = userAssetResponses?.[m.id];
+  const src = userResp?.customUrl || `/assets/${m.suggestedFilename || "hero-landscape.png"}`;
+  const isVideo = m.type === "video";
+
+  if (isVideo) {
+    return `
+          {/* Video Player: ${m.title} */}
+          <div className="${m.cssClassesTailwind || "w-full rounded-2xl overflow-hidden aspect-video bg-black flex items-center justify-center"}">
+            <video controls className="w-full h-full object-cover">
+              <source src="${src}" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>`;
+  }
+
+  return `
+          {/* Media Showcase: ${m.title} */}
+          <div className="${m.cssClassesTailwind || "w-full rounded-t-2xl overflow-hidden border border-neutral-200/50 shadow-sm"}">
+            <div className="relative w-full aspect-video min-h-105 bg-neutral-200 overflow-hidden flex items-center justify-center">
+              <Image 
+                src="${src}"
+                alt="${m.title}"
+                fill
+                priority
+                className="object-cover object-center"
+              />
+            </div>
+          </div>`;
+}
+
+function renderIndividualComponentJsx(comp: any, mediaList: any[], userAssetResponses?: any): string {
+  const type = (comp.type || "").toLowerCase();
+  const subElements = comp.subElements || [];
+
+  // 1. Navigation bar
+  if (type.includes("nav") || type.includes("header")) {
+    if (subElements.length > 0) {
+      const logo = subElements.find((s: any) => s.role === "logo");
+      const search = subElements.find((s: any) => s.role === "search_input");
+      const navLinks = subElements.filter((s: any) => s.role === "nav_link" || s.role === "nav_item");
+      const buttons = subElements.filter((s: any) => s.role === "button");
+
+      return `
+          {/* Navigation Bar */}
+          <nav className="${comp.cssClassesTailwind}">
+            {/* Brand Logo */}
+            <div className="flex items-center gap-6">
+              ${logo ? `<Link href="/" className="${logo.cssClassesTailwind}">${logo.content}</Link>` : `<span className="font-bold text-xl">Brand</span>`}
+              
+              {/* Nav Links */}
+              <div className="hidden md:flex items-center gap-5 text-sm">
+                ${navLinks.map((nl: any) => `
+                <Link href="#" className="${nl.cssClassesTailwind}">
+                  ${nl.content}
+                </Link>`).join("\n                ")}
+              </div>
+            </div>
+
+            {/* Search Input */}
+            ${search ? `
+            <div className="relative flex-1 max-w-xs mx-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
+              <input 
+                type="text" 
+                placeholder="${search.content || "Search..."}" 
+                className="${search.cssClassesTailwind}" 
+              />
+            </div>` : ""}
+
+            {/* Actions / Auth Buttons */}
+            <div className="flex items-center gap-3">
+              ${buttons.map((b: any) => `
+              <button className="${b.cssClassesTailwind}">
+                ${b.content}
+              </button>`).join("\n              ")}
+            </div>
+          </nav>`;
+    }
+
+    return `
+          {/* Navbar */}
+          <nav className="${comp.cssClassesTailwind}">
+            <div className="font-bold text-lg">Logo</div>
+            <div className="flex items-center gap-4 text-sm">
+              <span>${comp.exactContent}</span>
+            </div>
+          </nav>`;
+  }
+
+  // 2. Headlines / Titles
+  if (type.includes("headline") || type.includes("heading") || type.includes("title")) {
+    const lines = (comp.exactContent || "").split(/\n| - /);
+    return `
+          {/* Headline */}
+          <h1 className="${comp.cssClassesTailwind}">
+            ${lines.map((line: string, i: number) => line + (i < lines.length - 1 ? "<br />" : "")).join("\n            ")}
+          </h1>`;
+  }
+
+  // 3. Badges / Sub-headers
+  if (type.includes("badge") || type.includes("sub-header") || type.includes("subheader")) {
+    return `
+          {/* Badge / Subhead */}
+          <div className="${comp.cssClassesTailwind}">
+            <span>${comp.exactContent}</span>
+          </div>`;
+  }
+
+  // 4. Inline Trigger / Author Rows
+  if (type.includes("trigger") || type.includes("author") || type.includes("creator")) {
+    if (subElements.length > 0) {
+      return `
+          {/* Author / Creator Row */}
+          <div className="${comp.cssClassesTailwind}">
+            ${subElements.map((sub: any) => {
+              if (sub.role === "avatar") {
+                return `<div className="relative w-6 h-6 rounded-full overflow-hidden bg-neutral-300 border border-neutral-200">
+                  <Image src="/avatar-placeholder.png" alt="Avatar" fill className="object-cover" />
+                </div>`;
+              }
+              if (sub.role === "badge") {
+                return `<span className="${sub.cssClassesTailwind}">${sub.content}</span>`;
+              }
+              return `<span className="${sub.cssClassesTailwind}">${sub.content}</span>`;
+            }).join("\n            ")}
+          </div>`;
+    }
+
+    return `
+          {/* Trigger List */}
+          <div className="${comp.cssClassesTailwind}">
+            ${comp.exactContent}
+          </div>`;
+  }
+
+  // 5. Media Cards / Images / Banners
+  if (type.includes("image") || type.includes("card") || type.includes("banner") || type.includes("mockup")) {
+    const matchingMedia = mediaList.find((m: any) => m.id === comp.id || comp.type.toLowerCase().includes(m.type.toLowerCase()));
+    const filename = matchingMedia?.suggestedFilename || "hero-landscape.png";
+    const userResp = userAssetResponses?.[matchingMedia?.id];
+    const assetSrc = userResp?.customUrl || `/assets/${filename}`;
+
+    return `
+          {/* Media Showcase Banner */}
+          <div className="${comp.cssClassesTailwind}">
+            <div className="relative w-full aspect-video min-h-95 bg-neutral-200 overflow-hidden flex items-center justify-center">
+              <Image 
+                src="${assetSrc}"
+                alt="${matchingMedia?.title || comp.morphology}"
+                fill
+                priority
+                className="object-cover object-center"
+              />
+            </div>
+          </div>`;
+  }
+
+  // Default fallback component
+  return `
+          {/* ${comp.type} */}
+          <div className="${comp.cssClassesTailwind}">
+            ${comp.exactContent || ""}
+          </div>`;
 }
 
 

@@ -26,6 +26,13 @@ import {
   Trash2,
   AlertCircle,
   RefreshCw,
+  Film,
+  User,
+  HelpCircle,
+  CheckCircle2,
+  Layers,
+  ArrowRight,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -33,7 +40,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import type { SpecDocument, GeneratedPrompt } from "@/lib/types/spatial";
 
 type InputSource = "image" | "git";
-type ProcessingStep = "idle" | "extracting" | "generating" | "complete";
+type ProcessingStep = "idle" | "extracting" | "interview" | "generating" | "complete";
 
 export default function DashboardPage() {
   const [source, setSource] = useState<InputSource>("image");
@@ -47,6 +54,9 @@ export default function DashboardPage() {
   const [progress, setProgress] = useState(0);
   const [specDocument, setSpecDocument] = useState<SpecDocument | null>(null);
   const [astData, setAstData] = useState<any | null>(null);
+  const [userAssetResponses, setUserAssetResponses] = useState<
+    Record<string, { preference: string; customUrl?: string; videoDetails?: string }>
+  >({});
   const [generatedPrompt, setGeneratedPrompt] = useState<GeneratedPrompt | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,17 +91,36 @@ export default function DashboardPage() {
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentProgressRef = useRef<number>(0);
 
-  const startProgressAnimation = useCallback((targetCap: number, speedMs: number = 220) => {
-    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+  // Smooth, organic progress animation that advances naturally and never freezes
+  const startProgressAnimation = useCallback((expectedDurationMs: number = 13000) => {
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+
+    const startTime = Date.now();
+    currentProgressRef.current = 6;
+    setProgress(6);
+
     progressTimerRef.current = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= targetCap) return prev;
-        const remaining = targetCap - prev;
-        const inc = Math.max(1, Math.min(5, Math.ceil(remaining * 0.15)));
-        return Math.min(targetCap, prev + inc);
-      });
-    }, speedMs);
+      const elapsed = Date.now() - startTime;
+      const ratio = elapsed / expectedDurationMs;
+
+      let nextProgress: number;
+      if (ratio < 1) {
+        // Natural ease-out curve: steadily progresses from 6% to ~90% across expected duration
+        nextProgress = Math.round(6 + 84 * (1 - Math.pow(1 - ratio, 1.7)));
+      } else {
+        // Asymptotic crawl beyond expected time: 90% -> 96% with steady micro-ticks so it never appears stuck
+        const extraSecs = (elapsed - expectedDurationMs) / 1000;
+        nextProgress = Math.min(96, Math.round(90 + 6 * (1 - Math.exp(-extraSecs / 8))));
+      }
+
+      currentProgressRef.current = Math.max(currentProgressRef.current, nextProgress);
+      setProgress(currentProgressRef.current);
+    }, 100);
   }, []);
 
   const stopProgressAnimation = useCallback(() => {
@@ -100,6 +129,49 @@ export default function DashboardPage() {
       progressTimerRef.current = null;
     }
   }, []);
+
+  // Smoothly glide from current progress to 100% over ~280ms, then pause briefly for visual confirmation
+  const finishProgressAnimation = useCallback(async (): Promise<void> => {
+    stopProgressAnimation();
+    return new Promise((resolve) => {
+      const start = currentProgressRef.current;
+      const duration = 280;
+      const startTime = Date.now();
+
+      const finishInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const t = Math.min(1, elapsed / duration);
+        const current = Math.round(start + (100 - start) * t);
+        currentProgressRef.current = current;
+        setProgress(current);
+
+        if (t >= 1) {
+          clearInterval(finishInterval);
+          setTimeout(() => {
+            resolve();
+          }, 180);
+        }
+      }, 30);
+    });
+  }, [stopProgressAnimation]);
+
+  const getProgressStatus = (currentStep: ProcessingStep, currentProgress: number): string => {
+    if (currentStep === "extracting") {
+      if (currentProgress < 25) return "Scanning canvas & layout structure...";
+      if (currentProgress < 50) return "Deconstructing components & typography...";
+      if (currentProgress < 75) return "Detecting media assets & color tokens...";
+      if (currentProgress < 94) return "Synthesizing pixel-accurate specification...";
+      if (currentProgress < 100) return "Finalizing design AST...";
+      return "Analysis complete!";
+    }
+    if (currentStep === "generating") {
+      if (currentProgress < 40) return "Compiling prompt blueprint...";
+      if (currentProgress < 80) return "Structuring asset protocols & layout scaffolds...";
+      if (currentProgress < 100) return "Finalizing IDE instructions...";
+      return "Blueprint ready!";
+    }
+    return "Processing...";
+  };
 
   useEffect(() => {
     return () => {
@@ -147,6 +219,7 @@ export default function DashboardPage() {
     setProgress(0);
     setSpecDocument(null);
     setAstData(null);
+    setUserAssetResponses({});
     setGeneratedPrompt(null);
     setError(null);
   }, [stopProgressAnimation, imagePreviewUrl]);
@@ -154,9 +227,8 @@ export default function DashboardPage() {
   const handleGitAnalyze = async () => {
     if (!gitUrl) return;
     setStep("extracting");
-    setProgress(4);
     setError(null);
-    startProgressAnimation(48, 200);
+    startProgressAnimation(4000);
 
     try {
       const response = await fetch("/api/git", {
@@ -222,7 +294,7 @@ export default function DashboardPage() {
 
       setSpecDocument(doc);
       setStep("generating");
-      startProgressAnimation(88, 180);
+      startProgressAnimation(1200);
 
       const promptResponse = await fetch("/api/generate-prompt", {
         method: "POST",
@@ -233,9 +305,8 @@ export default function DashboardPage() {
       if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
-      stopProgressAnimation();
-      setProgress(100);
-      setTimeout(() => setStep("complete"), 250);
+      await finishProgressAnimation();
+      setStep("complete");
     } catch (err) {
       stopProgressAnimation();
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -247,10 +318,9 @@ export default function DashboardPage() {
   const handleVisionAnalyze = async () => {
     if (!imageFile && !imageUrl) return;
     setStep("extracting");
-    setProgress(4);
     setError(null);
     setRetryStatus(null);
-    startProgressAnimation(48, 220);
+    startProgressAnimation(13000);
 
     try {
       const formData = new FormData();
@@ -286,21 +356,23 @@ export default function DashboardPage() {
 
       if (data.ast) {
         setAstData(data.ast);
-        setStep("generating");
-        startProgressAnimation(88, 180);
+        await finishProgressAnimation();
 
-        const promptResponse = await fetch("/api/generate-prompt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ast: data.ast }),
+        // Initialize default responses for detected media assets
+        const initialResponses: Record<string, { preference: string; customUrl?: string; videoDetails?: string }> = {};
+        (data.ast.mediaAssets || []).forEach((asset: any) => {
+          initialResponses[asset.id] = {
+            preference: "ask_ide",
+            customUrl: "",
+          };
         });
+        initialResponses["__general_video"] = {
+          preference: "no",
+          videoDetails: "",
+        };
+        setUserAssetResponses(initialResponses);
 
-        if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
-        const promptData = await promptResponse.json();
-        setGeneratedPrompt(promptData);
-        stopProgressAnimation();
-        setProgress(100);
-        setTimeout(() => setStep("complete"), 250);
+        setStep("interview");
         return;
       }
 
@@ -321,7 +393,7 @@ export default function DashboardPage() {
 
       setSpecDocument(doc);
       setStep("generating");
-      startProgressAnimation(88, 180);
+      startProgressAnimation(1200);
 
       const promptResponse = await fetch("/api/generate-prompt", {
         method: "POST",
@@ -332,14 +404,40 @@ export default function DashboardPage() {
       if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
       const promptData = await promptResponse.json();
       setGeneratedPrompt(promptData);
-      stopProgressAnimation();
-      setProgress(100);
-      setTimeout(() => setStep("complete"), 250);
+      await finishProgressAnimation();
+      setStep("complete");
     } catch (err) {
       stopProgressAnimation();
       setRetryStatus(null);
       setError(cleanErrorMessage(err));
       setStep("idle");
+      setProgress(0);
+    }
+  };
+
+  const handleGenerateFinalBlueprint = async (customResponses?: any) => {
+    if (!astData) return;
+    setStep("generating");
+    setError(null);
+    startProgressAnimation(1000);
+
+    try {
+      const responsesToUse = customResponses || userAssetResponses;
+      const promptResponse = await fetch("/api/generate-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ast: astData, userAssetResponses: responsesToUse }),
+      });
+
+      if (!promptResponse.ok) throw new Error("Failed to generate blueprint");
+      const promptData = await promptResponse.json();
+      setGeneratedPrompt(promptData);
+      await finishProgressAnimation();
+      setStep("complete");
+    } catch (err) {
+      stopProgressAnimation();
+      setError(cleanErrorMessage(err));
+      setStep("interview");
       setProgress(0);
     }
   };
@@ -551,12 +649,16 @@ export default function DashboardPage() {
                     </TabsContent>
 
                     <TabsContent value="url" className="space-y-3 pt-2">
-                      {imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:image")) && (
+                      {imageUrl && (
                         <div className="p-3 rounded-xl border bg-muted/10 space-y-2.5">
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-medium text-foreground flex items-center gap-1.5 truncate max-w-50">
                               <FileImage className="h-3.5 w-3.5 text-primary shrink-0" />
-                              URL Image Preview
+                              {imageUrl.match(/\.(png|jpg|jpeg|webp|svg|gif)($|\?)/i) || imageUrl.startsWith("data:image/")
+                                ? "Image URL Preview"
+                                : (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")
+                                  ? "Website URL (Live Capture)"
+                                  : "Design Source")}
                             </span>
                             <Button
                               variant="ghost"
@@ -572,21 +674,27 @@ export default function DashboardPage() {
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
-                          <div className="relative rounded-lg border max-h-64 bg-black/5 flex items-center justify-center overflow-hidden">
-                            <img
-                              src={imageUrl}
-                              alt="URL preview"
-                              className="max-h-64 w-auto object-contain rounded"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = "none";
-                              }}
-                            />
-                          </div>
+                          {(imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:image")) && (
+                            <div className="relative rounded-lg border max-h-64 bg-black/5 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={
+                                  imageUrl.match(/\.(png|jpg|jpeg|webp|svg|gif)($|\?)/i) || imageUrl.startsWith("data:image/")
+                                    ? imageUrl
+                                    : `https://s0.wp.com/mshots/v1/${encodeURIComponent(imageUrl)}?w=800`
+                                }
+                                alt="Design preview"
+                                className="max-h-64 w-auto object-contain rounded"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
 
                       <Input
-                        placeholder="https://example.com/screenshot.png"
+                        placeholder="Enter website URL (e.g. https://stripe.com) or image link"
                         value={imageUrl}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -669,11 +777,11 @@ export default function DashboardPage() {
 
             {isProcessing && (
               <Card>
-                <CardContent className="py-4 space-y-2">
+                <CardContent className="py-4 space-y-2.5">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        {step === "extracting" ? "Analyzing design..." : "Compiling prompt..."}
+                      <span className="text-muted-foreground font-medium">
+                        {getProgressStatus(step, progress)}
                       </span>
                       <span className="font-semibold text-primary tabular-nums">{progress}%</span>
                     </div>
@@ -820,74 +928,63 @@ export default function DashboardPage() {
                 </Card>
 
                 {astData ? (
-                  <Card className="border shadow-sm">
-                    <CardHeader className="py-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-semibold">
-                          Deconstructed Components ({astData.components?.length || 0})
+                  <Card className="border shadow-xs bg-card">
+                    <CardHeader className="py-2.5 px-4 flex flex-row items-center justify-between border-b">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Components ({astData.components?.length || 0})
                         </CardTitle>
-                        <div className="flex items-center gap-1.5">
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <span
-                            className="inline-block w-3.5 h-3.5 rounded-full border shadow-xs"
+                            className="inline-block w-2.5 h-2.5 rounded-full border shadow-xs"
                             style={{ backgroundColor: astData.theme?.backgroundBaseHex }}
                             title={`Base: ${astData.theme?.backgroundBaseHex}`}
                           />
                           <span
-                            className="inline-block w-3.5 h-3.5 rounded-full border shadow-xs"
+                            className="inline-block w-2.5 h-2.5 rounded-full border shadow-xs"
                             style={{ backgroundColor: astData.theme?.primaryAccentHex }}
                             title={`Accent: ${astData.theme?.primaryAccentHex}`}
                           />
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-                            {astData.typography?.suggestedGoogleFontHeading || "Heading"}
-                          </Badge>
                         </div>
+                        <span className="text-[10px] font-medium text-muted-foreground">
+                          {astData.typography?.suggestedGoogleFontHeading || "Heading"}
+                        </span>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-0 space-y-2">
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                    <CardContent className="p-3">
+                      <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
                         {astData.components?.map((c: any, idx: number) => (
                           <div
                             key={c.id || idx}
-                            className="p-2 rounded border text-xs bg-muted/5 space-y-1"
+                            className="flex items-center justify-between py-1.5 px-2.5 rounded-md hover:bg-muted/30 transition-colors text-xs"
                           >
-                            <div className="flex items-center justify-between gap-1">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
-                                  {c.type}
-                                </Badge>
-                                <span className="text-[11px] text-muted-foreground italic truncate">
-                                  {c.morphology}
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal shrink-0">
+                                {c.type}
+                              </Badge>
+                              {c.exactContent && (
+                                <span className="text-[11px] text-foreground truncate max-w-56 font-medium">
+                                  {c.exactContent}
                                 </span>
-                              </div>
-                              <span className="text-[10px] text-muted-foreground font-mono shrink-0">
-                                {c.placement?.alignment || "layout"}
-                              </span>
+                              )}
                             </div>
-                            {c.exactContent && (
-                              <p className="text-[11px] text-foreground font-medium truncate">
-                                &quot;{c.exactContent}&quot;
-                              </p>
-                            )}
-                            <p className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded truncate">
-                              {c.cssClassesTailwind}
-                            </p>
+                            <span className="text-[10px] text-muted-foreground font-mono shrink-0 ml-2">
+                              {c.placement?.alignment || "layout"}
+                            </span>
                           </div>
                         ))}
                       </div>
 
                       {astData.backgroundArtAndDecorations && astData.backgroundArtAndDecorations.length > 0 && (
-                        <div className="pt-2 border-t space-y-1.5">
-                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                            3D / Background Layers ({astData.backgroundArtAndDecorations.length})
-                          </p>
-                          <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                        <div className="pt-2 mt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span className="font-medium">Background Art:</span>
+                          <div className="flex items-center gap-1.5 truncate max-w-64">
                             {astData.backgroundArtAndDecorations.map((art: any, i: number) => (
-                              <div key={i} className="text-xs p-1.5 rounded border bg-muted/5 flex items-center justify-between">
-                                <span className="font-medium text-[11px] truncate">{art.name}</span>
-                                <Badge variant="outline" className="text-[9px] px-1 py-0">
-                                  z:{art.coordinates?.zIndex}
-                                </Badge>
-                              </div>
+                              <Badge key={i} variant="outline" className="text-[9px] px-1.5 py-0 font-normal">
+                                {art.name}
+                              </Badge>
                             ))}
                           </div>
                         </div>
@@ -895,24 +992,24 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 ) : specDocument ? (
-                  <Card className="border shadow-sm">
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-sm font-semibold">
-                        Extracted Elements ({specDocument?.metadata.totalElements})
+                  <Card className="border shadow-xs bg-card">
+                    <CardHeader className="py-2.5 px-4 flex flex-row items-center justify-between border-b">
+                      <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Elements ({specDocument?.metadata.totalElements})
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                    <CardContent className="p-3">
+                      <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
                         {specDocument?.extraction.elements.map((el) => (
                           <div
                             key={el.id}
-                            className="flex items-center justify-between p-1.5 rounded border text-xs bg-muted/5"
+                            className="flex items-center justify-between py-1 px-2.5 rounded-md hover:bg-muted/30 transition-colors text-xs"
                           >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <Badge variant="secondary" className="text-[10px] px-1 py-0 font-normal">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal shrink-0">
                                 {el.semanticTag}
                               </Badge>
-                              <span className="truncate font-medium">{el.name}</span>
+                              <span className="truncate font-medium text-foreground">{el.name}</span>
                             </div>
                             <span className="text-[10px] text-muted-foreground font-mono shrink-0">
                               {el.layout.desktop_16_9.coordinates.width}x{el.layout.desktop_16_9.coordinates.height}
@@ -924,6 +1021,182 @@ export default function DashboardPage() {
                   </Card>
                 ) : null}
               </>
+            )}
+
+            {step === "interview" && astData && (
+              <Card className="border shadow-xs bg-card">
+                <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-sm font-semibold">Media Assets</CardTitle>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
+                      {astData.mediaAssets?.length || 0}
+                    </Badge>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">Select how IDE handles each asset</span>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  {/* Compact Asset List */}
+                  {astData.mediaAssets && astData.mediaAssets.length > 0 ? (
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                      {astData.mediaAssets.map((asset: any) => {
+                        const currentResp = userAssetResponses[asset.id] || { preference: "ask_ide", customUrl: "" };
+                        return (
+                          <div key={asset.id} className="p-2.5 rounded-lg border bg-muted/10 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {asset.type === "avatar" ? (
+                                  <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                ) : asset.type === "video" ? (
+                                  <Film className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                ) : (
+                                  <FileImage className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                )}
+                                <span className="text-xs font-medium text-foreground truncate" title={asset.title}>
+                                  {asset.title}
+                                </span>
+                              </div>
+
+                              {/* Segmented Control */}
+                              <div className="flex items-center p-0.5 rounded-md bg-muted/60 border text-[11px] shrink-0">
+                                <button
+                                  type="button"
+                                  className={`px-2 py-0.5 rounded transition-all ${
+                                    currentResp.preference === "ask_ide"
+                                      ? "bg-background text-foreground font-medium shadow-xs"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                  onClick={() => {
+                                    setUserAssetResponses(prev => ({
+                                      ...prev,
+                                      [asset.id]: { ...prev[asset.id], preference: "ask_ide" }
+                                    }));
+                                  }}
+                                >
+                                  Ask IDE
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`px-2 py-0.5 rounded transition-all ${
+                                    currentResp.preference === "provide"
+                                      ? "bg-background text-foreground font-medium shadow-xs"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                  onClick={() => {
+                                    setUserAssetResponses(prev => ({
+                                      ...prev,
+                                      [asset.id]: { ...prev[asset.id], preference: "provide" }
+                                    }));
+                                  }}
+                                >
+                                  URL
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`px-2 py-0.5 rounded transition-all ${
+                                    currentResp.preference === "svg_placeholder"
+                                      ? "bg-background text-foreground font-medium shadow-xs"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                  onClick={() => {
+                                    setUserAssetResponses(prev => ({
+                                      ...prev,
+                                      [asset.id]: { ...prev[asset.id], preference: "svg_placeholder" }
+                                    }));
+                                  }}
+                                >
+                                  Mock
+                                </button>
+                              </div>
+                            </div>
+
+                            {currentResp.preference === "provide" && (
+                              <Input
+                                placeholder="Asset URL or path (e.g. /hero.png)"
+                                value={currentResp.customUrl || ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setUserAssetResponses(prev => ({
+                                    ...prev,
+                                    [asset.id]: { ...prev[asset.id], customUrl: val }
+                                  }));
+                                }}
+                                className="text-xs h-7"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      No external media detected.
+                    </p>
+                  )}
+
+                  {/* Minimal Video Option */}
+                  <div className="flex items-center justify-between pt-1 border-t text-xs">
+                    <span className="text-muted-foreground">Video Embed</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
+                          userAssetResponses["__general_video"]?.preference !== "yes"
+                            ? "bg-muted text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                        onClick={() => {
+                          setUserAssetResponses(prev => ({
+                            ...prev,
+                            __general_video: { preference: "no", videoDetails: "" }
+                          }));
+                        }}
+                      >
+                        No
+                      </button>
+                      <button
+                        type="button"
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
+                          userAssetResponses["__general_video"]?.preference === "yes"
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                        onClick={() => {
+                          setUserAssetResponses(prev => ({
+                            ...prev,
+                            __general_video: { preference: "yes", videoDetails: "" }
+                          }));
+                        }}
+                      >
+                        Yes
+                      </button>
+                    </div>
+                  </div>
+
+                  {userAssetResponses["__general_video"]?.preference === "yes" && (
+                    <Input
+                      placeholder="Video URL or embed instructions"
+                      value={userAssetResponses["__general_video"]?.videoDetails || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUserAssetResponses(prev => ({
+                          ...prev,
+                          __general_video: { preference: "yes", videoDetails: val }
+                        }));
+                      }}
+                      className="text-xs h-7"
+                    />
+                  )}
+
+                  {/* Single Action Button */}
+                  <Button
+                    className="w-full h-9 text-xs font-semibold mt-2"
+                    onClick={() => handleGenerateFinalBlueprint()}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    Generate Blueprint
+                  </Button>
+                </CardContent>
+              </Card>
             )}
 
             {step === "idle" && !specDocument && !astData && (
